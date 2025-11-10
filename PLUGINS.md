@@ -30,7 +30,7 @@
 
 ### GainKnob
 
-**Status:** 🚧 **Stage 4**
+**Status:** 🚧 **Stage 5**
 **Created:** 2025-11-10
 **Type:** Audio Effect (Utility)
 

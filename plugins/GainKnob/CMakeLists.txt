@@ -7,9 +7,17 @@ juce_add_plugin(GainKnob
     PLUGIN_CODE Gain
     FORMATS VST3 AU Standalone
     PRODUCT_NAME "GainKnob"
+    NEEDS_WEB_BROWSER TRUE        # ← Enable WebView
 )
 
-# Source files (minimal for Stage 2)
+# Embed UI files as binary data
+juce_add_binary_data(GainKnobData
+    SOURCES
+        ui/public/index.html
+        ui/public/js/juce.js
+)
+
+# Source files
 target_sources(GainKnob
     PRIVATE
         Source/PluginProcessor.cpp
@@ -25,6 +33,7 @@ target_include_directories(GainKnob
 # Required JUCE modules
 target_link_libraries(GainKnob
     PRIVATE
+        GainKnobData              # ← Link embedded UI files
         juce::juce_audio_basics
         juce::juce_audio_devices
         juce::juce_audio_formats
@@ -36,7 +45,7 @@ target_link_libraries(GainKnob
         juce::juce_events
         juce::juce_graphics
         juce::juce_gui_basics
-        juce::juce_gui_extra
+        juce::juce_gui_extra      # ← Contains WebBrowserComponent
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
@@ -46,7 +55,7 @@ target_link_libraries(GainKnob
 # Compile definitions
 target_compile_definitions(GainKnob
     PUBLIC
-        JUCE_WEB_BROWSER=0
+        JUCE_WEB_BROWSER=1        # ← Enable WebBrowserComponent
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
