@@ -56,8 +56,13 @@
 - `/improve [Name]` - Fix bugs or add features (enhanced with regression testing)
 
 ### Knowledge Base
-- `troubleshooting/by-plugin/` - Solutions organized by plugin
-- `troubleshooting/by-symptom/` - Solutions organized by symptom
+- `troubleshooting/build-failures/` - Build and compilation errors
+- `troubleshooting/runtime-issues/` - Crashes, exceptions, performance issues
+- `troubleshooting/gui-issues/` - UI layout and rendering problems
+- `troubleshooting/api-usage/` - JUCE API misuse and migration issues
+- `troubleshooting/dsp-issues/` - Audio processing problems
+- `troubleshooting/parameter-issues/` - APVTS and state management
+- `troubleshooting/validation-problems/` - pluginval failures
 - `troubleshooting/patterns/` - Common patterns and solutions
 
 ### Scripts

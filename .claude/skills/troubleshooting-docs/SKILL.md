@@ -13,7 +13,7 @@ preconditions:
 
 # troubleshooting-docs Skill
 
-**Purpose:** Automatically document solved problems to build searchable institutional knowledge with dual-indexing (by-plugin and by-symptom).
+**Purpose:** Automatically document solved problems to build searchable institutional knowledge with category-based organization (enum-validated problem types).
 
 ## Overview
 
@@ -134,39 +134,53 @@ Format: `[sanitized-symptom]-[plugin]-[YYYYMMDD].md`
 
 ### Step 5: Validate YAML Schema
 
-**CRITICAL:** All docs require validated YAML frontmatter.
+**CRITICAL:** All docs require validated YAML frontmatter with enum validation.
 
 **Load schema:**
-Read `.claude/skills/troubleshooting-docs/references/yaml-schema.md` for validation rules.
+```bash
+cat .claude/skills/troubleshooting-docs/schema.yaml
+```
+
+**Classify the problem:**
+- Which `problem_type` enum value? (build_error, runtime_error, ui_layout, etc.)
+- Which `component` enum value? (cmake, juce_gui_basics, juce_dsp, etc.)
+- What are specific `symptoms`? (exact error messages, observable behavior)
+- What's the `root_cause` enum value? (missing_module, missing_constraint, etc.)
+- What `resolution_type`? (code_fix, config_change, etc.)
+- What `severity`? (critical, moderate, minor)
+- What searchable `tags`? (lowercase, hyphenated keywords)
 
 **Required fields:**
+- ✅ `plugin` - String (plugin name or "JUCE")
+- ✅ `date` - String (YYYY-MM-DD format)
+- ✅ `problem_type` - Enum from schema
+- ✅ `component` - Enum from schema
+- ✅ `symptoms` - Array (1-5 items)
+- ✅ `root_cause` - Enum from schema
+- ✅ `resolution_type` - Enum from schema
+- ✅ `severity` - Enum from schema
 
-- `plugin`: String (must exist in PLUGINS.md - warning if not)
-- `date`: String (YYYY-MM-DD format)
-- `symptom`: String (brief description)
-- `severity`: Enum [low, medium, high, critical]
-- `tags`: Array (one or more of: build, runtime, validation, webview, dsp, gui, parameters, cmake, juce-api)
+**Optional fields:**
+- `juce_version` - String (X.Y.Z format)
+- `tags` - Array of strings
 
 **Validation process:**
 
 ```bash
-# Check date format
-if [[ ! "$DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-  echo "ERROR: date must be YYYY-MM-DD format"
-  exit 1
-fi
+# Verify enum values against schema
+# problem_type must be in: build_error, runtime_error, api_misuse, validation_failure,
+#   ui_layout, dsp_issue, state_management, performance, thread_violation
 
-# Check severity
-if [[ ! "$SEVERITY" =~ ^(low|medium|high|critical)$ ]]; then
-  echo "ERROR: severity must be low, medium, high, or critical"
-  exit 1
-fi
+# component must be in: cmake, juce_processor, juce_editor, juce_dsp, juce_gui_basics,
+#   juce_audio_utils, apvts, pluginval, xcode, system, webview
 
-# Check tags non-empty
-if [[ ${#TAGS[@]} -eq 0 ]]; then
-  echo "ERROR: tags must have at least one value"
-  exit 1
-fi
+# root_cause must be in: missing_framework, missing_module, wrong_api, thread_violation,
+#   missing_constraint, state_sync, memory_issue, config_error, version_incompatibility,
+#   logic_error, event_timing, url_protocol
+
+# resolution_type must be in: code_fix, config_change, environment_setup, api_migration
+
+# severity must be in: critical, moderate, minor
 ```
 
 **BLOCK if validation fails:**
@@ -175,8 +189,9 @@ fi
 ❌ YAML validation failed
 
 Errors:
-- severity: must be one of [low, medium, high, critical], got "moderate"
-- tags: must be non-empty array
+- problem_type: must be one of schema enums, got "compilation_error"
+- severity: must be one of [critical, moderate, minor], got "high"
+- symptoms: must be array with 1-5 items, got string
 
 Please provide corrected values.
 ```
@@ -185,51 +200,55 @@ Present retry with corrected values, don't proceed until valid.
 
 ### Step 6: Create Documentation
 
-**Determine category from tags:**
+**Determine category from problem_type enum:**
 
-Auto-detect primary category:
+Category mapping (based on validated `problem_type` field):
 
-- `build` → build-failures/
-- `runtime` → runtime-issues/
-- `validation` → validation-problems/
-- `webview` → webview-issues/
-- `dsp` → dsp-issues/
-- `gui` → gui-issues/
-- `parameters` → parameter-issues/
-- `cmake` → build-failures/
-- `juce-api` → api-usage/
+- `build_error` → troubleshooting/build-failures/
+- `runtime_error` → troubleshooting/runtime-issues/
+- `ui_layout` → troubleshooting/gui-issues/
+- `api_misuse` → troubleshooting/api-usage/
+- `dsp_issue` → troubleshooting/dsp-issues/
+- `state_management` → troubleshooting/parameter-issues/
+- `performance` → troubleshooting/runtime-issues/
+- `thread_violation` → troubleshooting/runtime-issues/
+- `validation_failure` → troubleshooting/validation-problems/
 
-**Create real file in by-plugin:**
+**Create documentation file:**
 
 ```bash
-PLUGIN="[PluginName]"
-CATEGORY="[detected-category]"
+PROBLEM_TYPE="[from validated YAML]"
+CATEGORY="[mapped from problem_type]"
 FILENAME="[generated-filename].md"
-REAL_FILE="troubleshooting/by-plugin/${PLUGIN}/${CATEGORY}/${FILENAME}"
+DOC_PATH="troubleshooting/${CATEGORY}/${FILENAME}"
 
 # Create directory if needed
-mkdir -p "troubleshooting/by-plugin/${PLUGIN}/${CATEGORY}"
+mkdir -p "troubleshooting/${CATEGORY}"
 
-# Write documentation
-cat > "$REAL_FILE" << 'EOF'
-[YAML frontmatter]
+# Write documentation using template
+cat > "$DOC_PATH" << 'EOF'
+---
+plugin: [PluginName or "JUCE"]
+date: [YYYY-MM-DD]
+problem_type: [validated enum value]
+component: [validated enum value]
+symptoms:
+  - [Observable symptom 1]
+  - [Observable symptom 2]
+root_cause: [validated enum value]
+resolution_type: [validated enum value]
+severity: [validated enum value]
+tags: [keywords]
+---
+
 [Documentation content from template]
 EOF
 ```
 
-**Create symlink in by-symptom:**
-
-```bash
-SYMLINK="troubleshooting/by-symptom/${CATEGORY}/${FILENAME}"
-
-# Create directory if needed
-mkdir -p "troubleshooting/by-symptom/${CATEGORY}"
-
-# Create relative symlink
-cd "troubleshooting/by-symptom/${CATEGORY}"
-ln -s "../../by-plugin/${PLUGIN}/${CATEGORY}/${FILENAME}" "${FILENAME}"
-cd -
-```
+**Result:**
+- Single file in category directory (no symlinks)
+- Enum validation ensures consistent categorization
+- Searchable by category, plugin, component, root_cause
 
 **Documentation template:**
 
