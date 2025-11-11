@@ -5,7 +5,15 @@ description: Resume plugin development from checkpoint
 
 # /continue
 
-When user runs `/continue [PluginName?]`, invoke the context-resume skill.
+When user runs `/continue [PluginName?]`, YOU MUST invoke the context-resume skill using the Skill tool.
+
+**IMPORTANT: Use this exact invocation:**
+
+```
+Skill({ skill: "context-resume" })
+```
+
+DO NOT manually read handoff files or present summaries. The context-resume skill handles all of this.
 
 ## Behavior
 

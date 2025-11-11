@@ -8,6 +8,45 @@
 
 ## Step 4a: Determine Routing
 
+Based on handoff content and user selection, route to appropriate skill.
+
+### Step 4a-1: Check Orchestration Mode
+
+**IMPORTANT:** Before routing, check if handoff has orchestration mode enabled:
+
+```yaml
+orchestration_mode: true
+next_action: invoke_[subagent]_agent
+next_phase: X.Y
+```
+
+If `orchestration_mode: true`:
+1. Present orchestration notice to user:
+   ```
+   ⚠️ ORCHESTRATION MODE ACTIVE
+
+   This handoff requires explicit skill invocation:
+   - Next action: [next_action value]
+   - Target phase: [next_phase value]
+
+   Ready to invoke plugin-workflow skill? (y/n)
+   ```
+
+2. After user confirmation, invoke plugin-workflow skill using Skill tool:
+   ```
+   Skill({ skill: "plugin-workflow" })
+   ```
+
+   Pass resume context through the skill invocation.
+
+3. DO NOT implement directly in main thread. The skill will handle subagent invocation.
+
+If `orchestration_mode: false` or not present, use legacy routing (below).
+
+---
+
+### Step 4a-2: Legacy Routing (orchestration_mode not enabled)
+
 Based on handoff content and user selection, route to appropriate skill:
 
 ### Workflow resume (stage = 0-6)

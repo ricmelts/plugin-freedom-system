@@ -77,11 +77,44 @@ If user chooses 1, exit and instruct them to run `/dream [PluginName]`.
 
 ---
 
+## Resume Entry Point
+
+**Purpose:** Handle workflow resume with orchestration mode support.
+
+**When invoked via context-resume skill:**
+
+1. **Check if handoff file exists:**
+   ```bash
+   if [ ! -f "plugins/${PLUGIN_NAME}/.continue-here.md" ]; then
+       echo "No handoff file found. Starting new workflow."
+       CURRENT_STAGE=0
+   fi
+   ```
+
+2. **Parse handoff for orchestration mode:**
+   ```bash
+   ORCHESTRATION_MODE=$(grep "^orchestration_mode:" plugins/${PLUGIN_NAME}/.continue-here.md | awk '{print $2}')
+   NEXT_ACTION=$(grep "^next_action:" plugins/${PLUGIN_NAME}/.continue-here.md | awk '{print $2}')
+   NEXT_PHASE=$(grep "^next_phase:" plugins/${PLUGIN_NAME}/.continue-here.md | awk '{print $2}')
+   ```
+
+3. **If orchestration_mode: true:**
+   - Read next_action (e.g., "invoke_dsp_agent")
+   - Read next_phase (e.g., "4.4")
+   - Parse phase to determine stage and sub-phase
+   - Invoke specified subagent using Task tool
+   - DO NOT implement directly in skill context
+
+4. **If orchestration_mode: false or not present:**
+   - Use legacy dispatcher (below)
+
+---
+
 ## Stage Dispatcher
 
 **Purpose:** Route to correct stage implementation based on current state.
 
-**Entry point:** Called by /implement command or when resuming workflow.
+**Entry point:** Called by /implement command or when resuming workflow WITHOUT orchestration mode.
 
 ### Implementation
 

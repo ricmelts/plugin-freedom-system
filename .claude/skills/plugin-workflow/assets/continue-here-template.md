@@ -6,9 +6,20 @@ status: in_progress | complete
 last_updated: YYYY-MM-DD HH:MM:SS
 complexity_score: X.Y
 phased_implementation: true | false
+orchestration_mode: true | false
+next_action: invoke_[subagent]_agent
+next_phase: N.M
 ---
 
 # Resume Point
+
+⚠️ **ORCHESTRATION MODE ACTIVE** (if orchestration_mode: true)
+
+When orchestration_mode is enabled:
+- /continue command MUST invoke context-resume skill using Skill tool
+- context-resume MUST invoke plugin-workflow skill using Skill tool
+- plugin-workflow MUST invoke specified subagent using Task tool
+- NO direct implementation in main thread
 
 ## Current State: Stage N(.M) - Description
 

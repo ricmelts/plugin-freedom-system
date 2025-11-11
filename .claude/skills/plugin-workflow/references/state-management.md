@@ -410,6 +410,9 @@ Call at beginning of Stage 0.
    - last_updated: [current timestamp]
    - complexity_score: null (filled in Stage 1)
    - phased_implementation: null (filled in Stage 1)
+   - orchestration_mode: true (enable dispatcher pattern)
+   - next_action: null (filled when stage/phase completes)
+   - next_phase: null (filled for phased implementations)
 3. Fill in markdown sections with context:
    - Current State: "Stage [N] - [description]"
    - Completed So Far: [what's done]
@@ -417,7 +420,7 @@ Call at beginning of Stage 0.
    - Context to Preserve: [key decisions, files, build status]
 4. Write to `plugins/[pluginName]/.continue-here.md`
 
-### updateHandoff(pluginName, stage, completed, nextSteps, complexityScore, phased)
+### updateHandoff(pluginName, stage, completed, nextSteps, complexityScore, phased, nextAction, nextPhase)
 
 **Purpose:** Update handoff file after each stage/phase completion.
 
@@ -430,10 +433,21 @@ Call at beginning of Stage 0.
    - last_updated: [current timestamp]
    - complexity_score: [score if known]
    - phased_implementation: [true/false if known]
+   - orchestration_mode: true (keep enabled for dispatcher pattern)
+   - next_action: [e.g., "invoke_dsp_agent", "invoke_gui_agent"]
+   - next_phase: [e.g., "4.4", "5.1"]
 3. Append to "Completed So Far" section
 4. Update "Next Steps" with new actions
 5. Update "Context to Preserve" with latest context
 6. Write back to file
+
+**Determining next_action:**
+- Stage 2 → "invoke_foundation_agent"
+- Stage 3 → "invoke_shell_agent"
+- Stage 4 → "invoke_dsp_agent"
+- Stage 5 → "invoke_gui_agent"
+- Stage 6 → "invoke_validator"
+- Phased stages: specify exact phase (e.g., "4.4" for DSP phase 4)
 
 ### deleteHandoff(pluginName)
 
