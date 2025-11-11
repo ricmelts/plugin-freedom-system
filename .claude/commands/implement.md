@@ -86,7 +86,10 @@ Present numbered menu of eligible plugins.
 /implement [PluginName]
 ```
 
-Verify preconditions, then invoke plugin-workflow skill starting at appropriate stage.
+Verify preconditions, then invoke plugin-workflow skill using the Skill tool:
+```
+Skill tool with skill: "plugin-workflow"
+```
 
 ## The Implementation Stages
 
