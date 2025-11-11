@@ -97,7 +97,8 @@ This file contains non-negotiable JUCE 8 patterns that prevent repeat mistakes. 
 
 - Phase 4.1: Core processing
 - Phase 4.2: Modulation/advanced features
-- Git commit after each phase
+- Return intermediate JSON report after each phase
+- plugin-workflow handles commits and state updates
 
 **Example:** Delay with filtering, basic reverb with parameters
 
@@ -108,8 +109,8 @@ This file contains non-negotiable JUCE 8 patterns that prevent repeat mistakes. 
 - Phase 4.1: Core DSP components
 - Phase 4.2: Modulation systems
 - Phase 4.3: Advanced features
-- Git commit after each phase
-- Update plan.md with phase completion timestamp
+- Return intermediate JSON report after each phase
+- plugin-workflow handles commits and state updates
 
 **Example:** Multi-stage compressor, complex synthesizer, multi-effect processor
 
@@ -385,27 +386,28 @@ for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
 **Phase 4.1: Core Processing**
 
 1. Implement primary DSP components
-2. Test core functionality
-3. Git commit: `feat: [Plugin] Stage 4.1 - core DSP`
-4. Update plan.md with completion timestamp
+2. Return intermediate JSON report (see report format below)
+3. plugin-workflow receives report, commits code, updates plan.md
+4. plugin-workflow presents decision menu to user
 
 **Phase 4.2: Modulation Systems**
 
 1. Add LFOs, envelopes, modulation routing
-2. Test modulation
-3. Git commit: `feat: [Plugin] Stage 4.2 - modulation`
-4. Update plan.md
+2. Return intermediate JSON report
+3. plugin-workflow handles commit and state updates
 
 **Phase 4.3: Advanced Features**
 
 1. Add effects, special features, optimizations
-2. Final testing
-3. Git commit: `feat: [Plugin] Stage 4.3 - advanced features`
-4. Update plan.md
+2. Return final JSON report
+3. plugin-workflow handles final commit and state updates
 
 **Between phases:**
 
-- Return intermediate report to plugin-workflow
+- You return intermediate report to plugin-workflow
+- plugin-workflow commits your code changes
+- plugin-workflow updates plan.md with completion timestamp
+- plugin-workflow presents decision menu
 - User decides: Continue to next phase | Review | Test | Pause
 - Each phase is independently testable
 
@@ -479,14 +481,18 @@ juce::dsp::\w+<float>\s+(\w+);
     "components_this_phase": [
       "juce::dsp::Compressor<float>",
       "juce::dsp::StateVariableTPTFilter<float>"
-    ],
-    "git_commit": "feat: [Plugin] Stage 4.1 - core DSP",
-    "plan_updated": true
+    ]
   },
   "issues": [],
-  "ready_for_next_stage": false // More phases remain
+  "ready_for_next_phase": true,
+  "next_phase": "4.2"
 }
 ```
+
+**Note:** plugin-workflow will receive this report and handle:
+- Git commit with message: `feat: [Plugin] Stage 4.1 - core DSP`
+- Update plan.md with phase completion timestamp
+- Present decision menu to user
 
 **On success (phased - final):**
 
@@ -579,9 +585,9 @@ juce::dsp::\w+<float>\s+(\w+);
 2. All parameters from parameter-spec.md connected to DSP
 3. processBlock() implements audio processing
 4. Real-time safety rules followed
-5. Build completes without errors
-6. Plugin processes audio correctly
-7. If phased: All phases complete with git commits
+5. Build completes without errors (verified by plugin-workflow)
+6. Plugin processes audio correctly (verified by plugin-workflow)
+7. If phased: All phases complete with intermediate reports returned to plugin-workflow
 
 **Stage 4 fails when:**
 
