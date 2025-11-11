@@ -28,6 +28,7 @@
 | TapeAge | 📦 Installed | 1.0.2 | 2025-11-11 |
 | ClapMachine | 💡 Ideated | - | 2025-11-10 |
 | DriveVerb | 🚧 Stage 2 | - | 2025-11-11 |
+| FlutterVerb | 💡 Ideated | - | 2025-11-11 |
 
 ### GainKnob
 
@@ -217,6 +218,51 @@ Algorithmic reverb with warm tape saturation applied only to the wet signal, plu
 - **2025-11-11 (Stage 0):** Research completed - DSP architecture documented
 - **2025-11-11 (Stage 1):** Planning - Complexity 5.0 (phased implementation)
 - **2025-11-11 (Stage 2):** Foundation - Build system operational, compiles successfully
+
+**Known Issues:**
+- None
+
+**Last Updated:** 2025-11-11
+
+### FlutterVerb
+
+**Status:** 💡 **Ideated** (UI mockup complete)
+**Created:** 2025-11-11
+**Type:** Audio Effect (Reverb)
+
+**Description:**
+Tape-driven plate reverb with extreme wow and flutter modulation for textured, analog-sounding spaces. Combines modern algorithmic clarity with vintage tape character.
+
+**Parameters (7 total):**
+- Mix: 0-100%, default 25% (dry/wet blend)
+- Size: 0-100%, default 50% (room dimensions)
+- Decay: 0.1s-10s, default 2.5s (reverb tail length)
+- Age: 0-100%, default 20% (tape character intensity - combines wow and flutter modulation depth)
+- Tone: -100% to +100%, default 0% (DJ-style filter: negative=low-pass, positive=high-pass, 0%=bypass)
+- Drive: 0-100%, default 20% (tape saturation/warmth)
+- Mod Mode: Toggle (Wet Only / Wet + Dry) - applies modulation to dry signal when enabled
+
+**DSP:** Plate reverb algorithm with size-controlled early reflections. Dual LFO wow/flutter modulation (different rates) controlled by Age parameter. Soft-clipping tape saturation with adjustable drive. DJ-style exponential filter (same implementation as GainKnob). User-selectable modulation routing (wet-only or wet+dry).
+
+**GUI:** WebView UI (600×640px). TapeAge-inspired dark radial gradient with brass accents. VU meter at top (output peak), two rows of knobs (Size/Decay/Mix, Age/Drive/Tone), horizontal toggle below Tone knob. Typewriter/monospace typography.
+
+**UI Mockup:** v6 (finalized 2025-11-11)
+- Design validated against creative brief (no drift)
+- 7 implementation files generated (HTML, C++ header/impl, CMake, checklist)
+- Ready for Stage 5 (GUI) implementation
+
+**Use Cases:**
+- Textured lead vocals with evolving, warbling space
+- Piano and keys with lush, moving reverb tails
+- Guitar ambience with vintage spring-like wobble
+- Mix bus texture for cohesive analog glue
+- Creative sound design with extreme pitch-shifted textures
+
+**Lifecycle Timeline:**
+- **2025-11-11:** Creative brief completed
+- **2025-11-11:** UI mockup v6 finalized (600×640px, TapeAge-inspired design)
+- **2025-11-11:** design-sync validation passed (no drift detected)
+- **2025-11-11:** Implementation files generated (ready for `/implement FlutterVerb`)
 
 **Known Issues:**
 - None
