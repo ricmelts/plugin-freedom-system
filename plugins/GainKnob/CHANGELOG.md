@@ -5,6 +5,19 @@ All notable changes to GainKnob will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2025-11-10
+
+### Fixed
+- Filter frequency direction inverted - center position (0%) now bypasses correctly
+- Low-pass: -100% = 200Hz (heavy bass), 0% = 20kHz (bypass) - was reversed
+- High-pass: 0% = 20Hz (bypass), +100% = 10kHz (heavy treble)
+- Center knob position (12 o'clock) now sounds unaffected as expected
+
+### Technical Details
+- Inverted low-pass formula using negative exponent
+- Low-pass now decreases frequency as knob moves left from center
+- High-pass increases frequency as knob moves right from center (unchanged)
+
 ## [1.2.1] - 2025-11-10
 
 ### Fixed

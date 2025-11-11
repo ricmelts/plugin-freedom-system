@@ -88,19 +88,19 @@ void GainKnobAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 
         if (filterPercent < 0.0f) {
             // Low-pass filter (negative values)
-            // Exponential mapping: -100% = 200Hz, -50% = ~1.4kHz, 0% = 20kHz
-            // Formula: cutoff = 20kHz * 10^((value/100) * log10(200/20000))
-            float normalizedValue = (filterPercent + 100.0f) / 100.0f; // 0.0 to 0.99
-            float cutoffHz = 20000.0f * std::pow(10.0f, normalizedValue * std::log10(200.0f / 20000.0f));
+            // Exponential mapping: -100% = 200Hz (heavy bass), 0% = 20kHz (bypass)
+            // Formula inverted: Start high at center, go low at extreme
+            float normalizedValue = std::abs(filterPercent) / 100.0f; // 0.0 to 1.0
+            float cutoffHz = 20000.0f * std::pow(10.0f, -normalizedValue * std::log10(20000.0f / 200.0f));
 
             *filterProcessor.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(
                 sampleRate, juce::jlimit(200.0f, 20000.0f, cutoffHz), 0.707f
             );
         } else {
             // High-pass filter (positive values)
-            // Exponential mapping: 0% = 20Hz, +50% = ~1kHz, +100% = 10kHz
-            // Formula: cutoff = 20Hz * 10^((value/100) * log10(10000/20))
-            float normalizedValue = filterPercent / 100.0f; // 0.01 to 1.0
+            // Exponential mapping: 0% = 20Hz (bypass), +100% = 10kHz (heavy treble)
+            // Formula: Start low at center, go high at extreme
+            float normalizedValue = filterPercent / 100.0f; // 0.0 to 1.0
             float cutoffHz = 20.0f * std::pow(10.0f, normalizedValue * std::log10(10000.0f / 20.0f));
 
             *filterProcessor.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(
