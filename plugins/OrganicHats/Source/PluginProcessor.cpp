@@ -1,11 +1,19 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "HiHatVoice.h"
+#include "HiHatSound.h"
 
 OrganicHatsAudioProcessor::OrganicHatsAudioProcessor()
     : AudioProcessor(BusesProperties()
                         .withOutput("Output", juce::AudioChannelSet::stereo(), true))
     , parameters(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
+    // Add 16 voices for polyphony (8 closed + 8 open typical use)
+    for (int i = 0; i < 16; ++i)
+        synth.addVoice(new HiHatVoice(parameters));
+
+    // Add hi-hat sound descriptor
+    synth.addSound(new HiHatSound());
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout OrganicHatsAudioProcessor::createParameterLayout()
@@ -71,8 +79,10 @@ OrganicHatsAudioProcessor::~OrganicHatsAudioProcessor()
 
 void OrganicHatsAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // Initialization will be added in Stage 4
-    juce::ignoreUnused(sampleRate, samplesPerBlock);
+    // Prepare synthesiser with sample rate
+    synth.setCurrentPlaybackSampleRate(sampleRate);
+
+    juce::ignoreUnused(samplesPerBlock);
 }
 
 void OrganicHatsAudioProcessor::releaseResources()
@@ -83,18 +93,12 @@ void OrganicHatsAudioProcessor::releaseResources()
 void OrganicHatsAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    juce::ignoreUnused(midiMessages);
 
-    // Parameter access example (for Stage 4 DSP implementation):
-    // auto* closedToneParam = parameters.getRawParameterValue("CLOSED_TONE");
-    // float closedTone = closedToneParam->load();  // Atomic read (real-time safe)
-    //
-    // All 6 parameters available:
-    // - CLOSED_TONE, CLOSED_DECAY, CLOSED_NOISE_COLOR
-    // - OPEN_TONE, OPEN_RELEASE, OPEN_NOISE_COLOR
-
-    // Clear output buffer (silence for Stage 3 - DSP added in Stage 4)
+    // Clear output buffer before synthesiser adds to it
     buffer.clear();
+
+    // Render MIDI-triggered hi-hat voices
+    synth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 }
 
 juce::AudioProcessorEditor* OrganicHatsAudioProcessor::createEditor()

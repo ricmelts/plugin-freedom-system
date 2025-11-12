@@ -34,5 +34,8 @@ public:
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
+    // Synthesiser for hi-hat voice management
+    juce::Synthesiser synth;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OrganicHatsAudioProcessor)
 };

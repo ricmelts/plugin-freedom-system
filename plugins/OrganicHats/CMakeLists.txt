@@ -18,11 +18,12 @@ juce_add_plugin(OrganicHats
     PLUGIN_MANUFACTURER_WEBSITE "https://yourcompany.com"
 )
 
-# Source files (minimal for Stage 2)
+# Source files
 target_sources(OrganicHats
     PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
+        Source/HiHatVoice.cpp
 )
 
 # Include paths
