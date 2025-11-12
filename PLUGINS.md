@@ -313,7 +313,7 @@ Tape-driven plate reverb with extreme wow and flutter modulation for textured, a
 
 ### LushVerb
 
-**Status:** 💡 **Ideated**
+**Status:** 🚧 **Stage 0**
 **Created:** 2025-11-11
 **Type:** Audio Effect (Reverb)
 
@@ -321,14 +321,14 @@ Tape-driven plate reverb with extreme wow and flutter modulation for textured, a
 Stunning, lush algorithmic reverb inspired by Strymon BigSky. Four simple controls deliver consistently gorgeous ambient/ethereal reverb with infinite tails, built-in modulation, and subtle shimmer.
 
 **Parameters (4 total):**
-- Size: 0.5s-20s+, default 2.5s (reverb tail length)
-- Damping: 0-100%, default 30% (high-frequency rolloff)
-- Shimmer: Always-on subtle (ethereal +1 octave sparkle)
-- Mix: 0-100%, default 30% (dry/wet blend)
+- SIZE: 0.5s-20s, default 2.5s (reverb tail length)
+- DAMPING: 0-100%, default 30% (high-frequency rolloff)
+- SHIMMER: 0-100%, default 30% (+1 octave pitch-shifted signal amount)
+- MIX: 0-100%, default 30% (dry/wet blend)
 
-**DSP:** High-quality algorithmic reverb (multi-tap delay network or velvet noise preferred for maximum lushness). Built-in chorus modulation for depth. Clean pitch-shifting for shimmer (+1 octave). Smooth damping control for tail character.
+**DSP:** juce::dsp::Reverb engine + custom shimmer (phase vocoder pitch shifting). Built-in dual LFO modulation (always-on). Pre-reverb shimmer routing. Dry/wet mixing with latency compensation.
 
-**GUI:** Four horizontal rotary knobs with value displays. Clean, modern, elegant aesthetic. Premium feel.
+**GUI:** Industrial 19" rack unit aesthetic with four machined knobs, LED output meter, 500×300px. Brushed metal texture with gold accents.
 
 **Use Cases:**
 - Versatile mixing tool (vocals, instruments)
@@ -342,6 +342,8 @@ Stunning, lush algorithmic reverb inspired by Strymon BigSky. Four simple contro
 
 **Lifecycle Timeline:**
 - **2025-11-11:** Creative brief completed
+- **2025-11-11:** UI mockup v3 finalized
+- **2025-11-11 (Stage 0):** Research completed - DSP architecture documented
 
 **Known Issues:**
 - None
