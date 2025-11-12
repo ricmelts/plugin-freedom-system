@@ -326,7 +326,7 @@
             ledMeter.appendChild(led);
         }
 
-        // JUCE parameter bindings
+        // JUCE parameter bindings - PATTERN #15 & #16 compliant
         const knobs = document.querySelectorAll('.knob');
 
         knobs.forEach(knob => {
@@ -334,20 +334,24 @@
             const indicator = knob.querySelector('.knob-indicator');
             const valueDisplay = document.querySelector(`[data-param-display="${paramId}"]`);
 
-            // Get initial state from JUCE
+            // Get SliderState from JUCE (Pattern #15)
+            let sliderState = null;
             if (window.__JUCE__ && window.__JUCE__.backend) {
-                const state = window.__JUCE__.backend.getSliderState(paramId);
-                if (state) {
-                    updateKnob(state.normalised);
-                }
+                sliderState = window.__JUCE__.backend.getSliderState(paramId);
             }
 
+            if (!sliderState) {
+                console.error(`Failed to get slider state for ${paramId}`);
+                return;
+            }
+
+            // Update knob visual and value display
             function updateKnob(normalised) {
                 // Update rotation (-135° to +135°, 270° total range)
                 const rotation = normalised * 270 - 135;
                 indicator.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
 
-                // Update value display
+                // Update value display with correct formatting
                 if (paramId === 'SIZE') {
                     const value = 0.5 + normalised * 19.5; // 0.5 to 20.0
                     valueDisplay.textContent = `${value.toFixed(1)}s`;
@@ -357,37 +361,46 @@
                 }
             }
 
-            // Mouse drag interaction
+            // Initialize knob from current parameter value
+            updateKnob(sliderState.getNormalisedValue());
+
+            // Pattern #15: valueChangedEvent receives NO parameters
+            // Must call getNormalisedValue() inside callback
+            sliderState.valueChangedEvent.addListener(() => {
+                const value = sliderState.getNormalisedValue();
+                updateKnob(value);
+            });
+
+            // Pattern #16: Relative drag (frame-delta, not absolute positioning)
             let isDragging = false;
-            let startY = 0;
-            let startNormalised = 0;
+            let lastY = 0;  // Previous frame Y, NOT start Y
 
             knob.addEventListener('mousedown', e => {
                 isDragging = true;
-                startY = e.clientY;
-
-                // Get current state
-                if (window.__JUCE__ && window.__JUCE__.backend) {
-                    const state = window.__JUCE__.backend.getSliderState(paramId);
-                    startNormalised = state ? state.normalised : 0.5;
-                }
+                lastY = e.clientY;  // Store CURRENT position
                 e.preventDefault();
             });
 
             document.addEventListener('mousemove', e => {
                 if (!isDragging) return;
 
-                const deltaY = startY - e.clientY;
+                // Calculate movement since LAST FRAME (not since start)
+                const deltaY = lastY - e.clientY;
                 const sensitivity = 0.005;
-                let newNormalised = startNormalised + (deltaY * sensitivity);
-                newNormalised = Math.max(0, Math.min(1, newNormalised));
 
-                // Send to JUCE
-                if (window.__JUCE__ && window.__JUCE__.backend) {
-                    window.__JUCE__.backend.emitEvent(`${paramId}_VALUE_CHANGED`, newNormalised);
-                }
+                // Get current value and increment it
+                let currentValue = sliderState.getNormalisedValue();
+                let newValue = currentValue + (deltaY * sensitivity);
+                newValue = Math.max(0, Math.min(1, newValue));
 
-                updateKnob(newNormalised);
+                // Send to JUCE via SliderState
+                sliderState.setNormalisedValue(newValue);
+
+                // Update for next frame
+                lastY = e.clientY;
+
+                // Visual update (also triggered by valueChangedEvent, but immediate feels better)
+                updateKnob(newValue);
             });
 
             document.addEventListener('mouseup', () => {
@@ -398,42 +411,30 @@
             knob.addEventListener('wheel', e => {
                 e.preventDefault();
 
-                let currentNormalised = 0.5;
-                if (window.__JUCE__ && window.__JUCE__.backend) {
-                    const state = window.__JUCE__.backend.getSliderState(paramId);
-                    currentNormalised = state ? state.normalised : 0.5;
-                }
-
+                const currentValue = sliderState.getNormalisedValue();
                 const delta = e.deltaY < 0 ? 0.01 : -0.01;
-                let newNormalised = currentNormalised + delta;
-                newNormalised = Math.max(0, Math.min(1, newNormalised));
+                let newValue = currentValue + delta;
+                newValue = Math.max(0, Math.min(1, newValue));
 
-                // Send to JUCE
-                if (window.__JUCE__ && window.__JUCE__.backend) {
-                    window.__JUCE__.backend.emitEvent(`${paramId}_VALUE_CHANGED`, newNormalised);
-                }
-
-                updateKnob(newNormalised);
+                sliderState.setNormalisedValue(newValue);
+                updateKnob(newValue);
             });
 
-            // Double-click to reset
+            // Double-click to reset to default
             knob.addEventListener('dblclick', () => {
-                const defaultNormalised = paramId === 'SIZE' ? 0.1026 : 0.3; // SIZE default 2.5s = ~0.1026, others 30%
-
-                // Send to JUCE
-                if (window.__JUCE__ && window.__JUCE__.backend) {
-                    window.__JUCE__.backend.emitEvent(`${paramId}_VALUE_CHANGED`, defaultNormalised);
+                // Calculate default normalized values from parameter-spec.md
+                let defaultNormalised;
+                if (paramId === 'SIZE') {
+                    // Default 2.5s, range 0.5-20.0s
+                    defaultNormalised = (2.5 - 0.5) / (20.0 - 0.5);  // ~0.1026
+                } else {
+                    // DAMPING, SHIMMER, MIX all default to 30% = 0.3
+                    defaultNormalised = 0.3;
                 }
 
+                sliderState.setNormalisedValue(defaultNormalised);
                 updateKnob(defaultNormalised);
             });
-
-            // Listen for parameter changes from C++
-            if (window.__JUCE__ && window.__JUCE__.backend) {
-                window.__JUCE__.backend.addEventListener(`${paramId}_STATE_CHANGED`, (state) => {
-                    updateKnob(state.normalised);
-                });
-            }
         });
 
         // VU meter animation (placeholder - driven by C++ in production)
@@ -459,7 +460,7 @@
         }
         updateMeter();
 
-        console.log('LushVerb UI loaded');
+        console.log('LushVerb UI loaded - Parameter bindings active');
     </script>
 </body>
 </html>
