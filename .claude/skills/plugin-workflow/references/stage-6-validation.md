@@ -18,7 +18,64 @@
 
 **Actions:**
 
-1. Create factory presets:
+**CRITICAL: Always rebuild after Stage 5 completion**
+
+Stage 5 modifies source code (WebView UI integration, parameter bindings). Without rebuilding, Stage 6 will install stale binaries from Stage 4 that lack GUI changes.
+
+1. Rebuild with Stage 5 changes:
+
+```bash
+# Rebuild from root directory (matches foundation-agent build location)
+echo "Rebuilding ${PLUGIN_NAME} with Stage 5 GUI changes..."
+
+cmake --build build --config Release \
+  --target ${PLUGIN_NAME}_VST3 \
+  --target ${PLUGIN_NAME}_AU \
+  --parallel
+
+if [ $? -ne 0 ]; then
+  echo "❌ Build failed after Stage 5 changes"
+  echo "Check logs/[PluginName]/build_*.log for errors"
+  exit 1
+fi
+
+echo "✓ Build complete with Stage 5 WebView integration"
+
+# Verify binaries are fresh (newer than source files)
+LATEST_SOURCE=$(find plugins/${PLUGIN_NAME}/Source -type f -exec stat -f "%m" {} \; 2>/dev/null | sort -n | tail -1)
+VST3_BINARY="build/plugins/${PLUGIN_NAME}/${PLUGIN_NAME}_artefacts/Release/VST3/${PRODUCT_NAME}.vst3/Contents/MacOS/${PRODUCT_NAME}"
+
+if [ -f "$VST3_BINARY" ]; then
+  BINARY_TIME=$(stat -f "%m" "$VST3_BINARY" 2>/dev/null)
+
+  if [ -n "$BINARY_TIME" ] && [ -n "$LATEST_SOURCE" ] && [ $BINARY_TIME -lt $LATEST_SOURCE ]; then
+    echo "❌ ERROR: Binary is older than source files"
+    echo "   Binary timestamp: $(date -r $BINARY_TIME '+%Y-%m-%d %H:%M:%S')"
+    echo "   Latest source:    $(date -r $LATEST_SOURCE '+%Y-%m-%d %H:%M:%S')"
+    echo "   This indicates a build system bug - rebuild should have created fresh binary"
+    exit 1
+  fi
+
+  echo "✓ Binary timestamp verification passed"
+  echo "  Binary built at: $(date -r $BINARY_TIME '+%Y-%m-%d %H:%M:%S')"
+else
+  echo "⚠️  VST3 binary not found (expected location: $VST3_BINARY)"
+  echo "   Build may have failed or used different output path"
+  exit 1
+fi
+```
+
+**Git commit:**
+
+After successful rebuild:
+
+```bash
+# No source changes to commit (rebuild only updates binaries in build/)
+# But log the rebuild event
+echo "Stage 6: Rebuild complete with Stage 5 changes" >> logs/${PLUGIN_NAME}/build_$(date +%Y%m%d).log
+```
+
+2. Create factory presets:
 
 ```bash
 mkdir -p plugins/[PluginName]/Presets/
@@ -37,7 +94,7 @@ Create 3-5 preset files showcasing plugin capabilities.
 </preset>
 ```
 
-2. Invoke plugin-testing skill:
+3. Invoke plugin-testing skill:
 
 Present test method choice:
 
@@ -54,7 +111,7 @@ Choose (1-4): _
 
 If tests fail, STOP and wait for fixes.
 
-3. Generate CHANGELOG.md:
+4. Generate CHANGELOG.md:
 
 **Format:**
 
@@ -89,7 +146,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Tested in [DAW names]
 ```
 
-4. Invoke validator subagent:
+5. Invoke validator subagent:
 
 Call validator to verify Stage 6 completion:
 
@@ -128,7 +185,7 @@ if (report.status === "FAIL") {
 }
 ```
 
-5. Update PLUGINS.md:
+6. Update PLUGINS.md:
 
 Call `updatePluginStatus(pluginName, "✅ Working")`.
 
@@ -147,7 +204,7 @@ Add final fields to entry:
 
 Add timeline entry: `updatePluginTimeline(pluginName, 6, "Validation complete")`.
 
-6. **CRITICAL: Delete .continue-here.md handoff file**
+7. **CRITICAL: Delete .continue-here.md handoff file**
 
 **Purpose:** Remove workflow state when plugin is complete. Prevents stale handoff pollution.
 
@@ -181,7 +238,7 @@ This commits:
 
 **IMPORTANT:** The `.continue-here.md` file is deleted BEFORE commit, so it will NOT be in the commit. The deletion itself is the state change (handoff → no handoff = workflow complete).
 
-7. Auto-install plugin:
+8. Auto-install plugin:
 
 Invoke plugin-lifecycle skill via Skill tool:
 

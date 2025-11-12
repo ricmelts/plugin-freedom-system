@@ -98,18 +98,46 @@ stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" \
 
 ## Prevention
 
+**RESOLVED: 2025-11-12**
+
+This issue has been fixed in the Stage 6 workflow. The fix adds an explicit rebuild step at the start of Stage 6 validation.
+
+**Implementation:**
+- **File modified:** `.claude/skills/plugin-workflow/references/stage-6-validation.md`
+- **Location:** Lines 21-76 (new Step 1: Rebuild with Stage 5 changes)
+- **What changed:**
+  1. Added mandatory rebuild before preset creation
+  2. Added timestamp verification (binary vs source files)
+  3. Fails fast if binary is stale or build fails
+
 **For validator subagent (Stage 6):**
-1. **Don't assume existing builds are current** - Check artifact timestamps against source file timestamps
-2. **Always rebuild in Stage 6** - Run `cmake --build build --config Release` even if artifacts exist
-3. **Verify build includes recent changes** - Check that binary size/timestamp changed after rebuild
+1. **Don't assume existing builds are current** - Check artifact timestamps against source file timestamps ✅ **FIXED**
+2. **Always rebuild in Stage 6** - Run `cmake --build build --config Release` even if artifacts exist ✅ **FIXED**
+3. **Verify build includes recent changes** - Check that binary size/timestamp changed after rebuild ✅ **FIXED**
 
 **For workflow orchestration:**
-Add explicit rebuild step after Stage 5 (GUI integration) before Stage 6 (validation):
+Explicit rebuild step now exists in Stage 6 orchestration (stage-6-validation.md, Step 1):
 
 ```bash
-# In plugin-workflow orchestration after Stage 5 completion:
-echo "Rebuilding with Stage 5 GUI changes..."
-cmake --build build --config Release --target ${PLUGIN_NAME}_VST3 ${PLUGIN_NAME}_AU
+# Rebuild from root directory (matches foundation-agent build location)
+echo "Rebuilding ${PLUGIN_NAME} with Stage 5 GUI changes..."
+
+cmake --build build --config Release \
+  --target ${PLUGIN_NAME}_VST3 \
+  --target ${PLUGIN_NAME}_AU \
+  --parallel
+
+# Timestamp verification ensures binary is newer than source
+LATEST_SOURCE=$(find plugins/${PLUGIN_NAME}/Source -type f -exec stat -f "%m" {} \; 2>/dev/null | sort -n | tail -1)
+VST3_BINARY="build/plugins/${PLUGIN_NAME}/${PLUGIN_NAME}_artefacts/Release/VST3/${PRODUCT_NAME}.vst3/Contents/MacOS/${PRODUCT_NAME}"
+
+if [ -f "$VST3_BINARY" ]; then
+  BINARY_TIME=$(stat -f "%m" "$VST3_BINARY" 2>/dev/null)
+  if [ -n "$BINARY_TIME" ] && [ -n "$LATEST_SOURCE" ] && [ $BINARY_TIME -lt $LATEST_SOURCE ]; then
+    echo "❌ ERROR: Binary is older than source files"
+    exit 1
+  fi
+fi
 ```
 
 **For installation process:**
