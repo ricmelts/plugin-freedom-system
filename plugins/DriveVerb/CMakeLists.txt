@@ -48,28 +48,24 @@ target_link_libraries(DriveVerb
 # Generate JuceHeader.h (JUCE 8 requirement - MUST come after target_link_libraries)
 juce_generate_juce_header(DriveVerb)
 
-# WebView UI Resources (commented - gui-agent will uncomment in Stage 5)
-# juce_add_binary_data(DriveVerb_UIResources
-#     SOURCES
-#         Source/ui/public/index.html
-#         Source/ui/public/js/juce/index.js
-#         Source/ui/public/js/juce/check_native_interop.js
-# )
-#
-# target_link_libraries(DriveVerb
-#     PRIVATE
-#         DriveVerb_UIResources
-# )
+# WebView UI Resources
+juce_add_binary_data(DriveVerb_UIResources
+    SOURCES
+        Source/ui/public/index.html
+        Source/ui/public/js/juce/index.js
+        Source/ui/public/js/juce/check_native_interop.js
+)
+
+# Link UI resources
+target_link_libraries(DriveVerb
+    PRIVATE
+        DriveVerb_UIResources
+)
 
 # Compile definitions
 target_compile_definitions(DriveVerb
     PUBLIC
         JUCE_VST3_CAN_REPLACE_VST2=0
+        JUCE_WEB_BROWSER=1
+        JUCE_USE_CURL=0
 )
-
-# WebView support (commented - gui-agent will uncomment in Stage 5)
-# target_compile_definitions(DriveVerb
-#     PUBLIC
-#         JUCE_WEB_BROWSER=1
-#         JUCE_USE_CURL=0
-# )
