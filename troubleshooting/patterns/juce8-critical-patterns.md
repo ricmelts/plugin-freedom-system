@@ -978,6 +978,100 @@ current += (target - current) * speed
 
 ---
 
+## 21. WebView ES6 Module Loading - type="module" Required (CRITICAL)
+
+### ❌ WRONG (Knobs freeze - getSliderState undefined)
+```html
+<!-- index.html - Missing type="module" -->
+<script src="js/juce/index.js"></script>
+<script>
+    // JUCE parameter bindings
+    const knobs = document.querySelectorAll('.knob');
+
+    knobs.forEach(knob => {
+        const paramId = knob.dataset.param;
+
+        // ❌ getSliderState is undefined - ES6 exports not accessible
+        let sliderState = window.__JUCE__.backend.getSliderState(paramId);
+        // Returns null, early return, no handlers attached
+
+        if (!sliderState) {
+            console.error(`Failed to get slider state for ${paramId}`);
+            return;  // Knobs frozen - no drag handlers attached
+        }
+    });
+</script>
+```
+
+**Result:** Knobs display correctly but don't respond to drag. Console shows "Failed to get slider state" errors.
+
+### ✅ CORRECT
+```html
+<!-- index.html - ES6 module with proper import -->
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+    import { getSliderState } from './js/juce/index.js';
+
+    // JUCE parameter bindings
+    const knobs = document.querySelectorAll('.knob');
+
+    knobs.forEach(knob => {
+        const paramId = knob.dataset.param;
+
+        // ✅ Use imported function directly
+        let sliderState = getSliderState(paramId);
+
+        if (!sliderState) {
+            console.error(`Failed to get slider state for ${paramId}`);
+            return;
+        }
+
+        // Attach drag handlers, listeners (now executes successfully)
+        sliderState.valueChangedEvent.addListener(() => {
+            const value = sliderState.getNormalisedValue();
+            updateKnob(value);
+        });
+
+        // Mouse drag handler
+        knob.addEventListener('mousedown', e => {
+            // ... drag implementation
+        });
+    });
+</script>
+```
+
+**Why:**
+- JUCE 8's `index.js` uses ES6 `export` syntax (exports `getSliderState`, `getToggleState`, etc.)
+- ES6 modules REQUIRE `type="module"` attribute on script tags
+- Without `type="module"`, browser ignores `export` statements → functions unavailable
+- `getSliderState()` is NOT on `window.__JUCE__.backend` - it's an ES6 module export
+- Must use `import { getSliderState }` to access the exported function
+
+**Symptoms:**
+- Knobs display correctly but don't rotate when dragged
+- Click/depress visual feedback works (CSS `:active`, no JavaScript needed)
+- DAW automation works but UI doesn't reflect changes
+- Console error: `"Failed to get slider state for [paramId]"`
+- No drag handlers or listeners attached (early return due to null check)
+
+**When:** ALL WebView-based plugins using JUCE 8's official `index.js`
+
+**Required changes:**
+1. Add `type="module"` to external script tag
+2. Add `type="module"` to inline script tag
+3. Add `import { getSliderState } from './js/juce/index.js'` at top of inline script
+4. Call `getSliderState(paramId)` directly (not via `window.__JUCE__.backend`)
+
+**Also applies to:**
+- `getToggleState()` for boolean parameters
+- `getComboBoxState()` for dropdown parameters
+- `getNativeFunction()` for custom C++ callbacks
+- Any other functions exported from JUCE's `index.js`
+
+**Documented in:** `troubleshooting/api-usage/webview-es6-module-loading-frozen-knobs-lushverb-20251111.md`
+
+---
+
 All patterns documented with full context in:
 - `troubleshooting/build-failures/`
 - `troubleshooting/runtime-issues/`

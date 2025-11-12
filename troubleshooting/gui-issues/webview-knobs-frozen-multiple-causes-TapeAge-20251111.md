@@ -355,6 +355,7 @@ rm -rf ~/Library/Audio/Plug-Ins/Components/"OLD NAME.component"
 
 - See also: [webview-frame-load-interrupted-TapeAge-20251111.md](webview-frame-load-interrupted-TapeAge-20251111.md) - Earlier WebView loading issue
 - See also: [webview-parameter-not-updating-wrong-event-format-JUCE-20251108.md](../api-usage/webview-parameter-not-updating-wrong-event-format-JUCE-20251108.md) - Different WebView parameter issue (event format mismatch)
+- See also: [webview-es6-module-loading-frozen-knobs-lushverb-20251111.md](../api-usage/webview-es6-module-loading-frozen-knobs-lushverb-20251111.md) - Fourth frozen knobs root cause (ES6 module loading mismatch)
 - Related pattern: troubleshooting/patterns/juce8-critical-patterns.md #12 (WebSliderParameterAttachment three parameters)
 - Related pattern: troubleshooting/patterns/juce8-critical-patterns.md #13 (check_native_interop.js required)
 
