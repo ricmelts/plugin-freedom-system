@@ -6,18 +6,15 @@ The plugin-improve skill can receive pre-computed research findings from the dee
 
 ## Handoff Trigger
 
-**Routing Directive:** `Invoke plugin-improve skill`
-
-When deep-research completes investigation and user chooses "Apply solution", deep-research outputs this directive for the main conversation orchestrator to act on.
+When deep-research completes investigation and user chooses "Apply solution", deep-research invokes plugin-improve directly via the Skill tool.
 
 ## Detection Mechanism
 
 **Phase 0.45: Research Detection** scans conversation history for:
 
-1. **Routing directive:** "Invoke plugin-improve skill"
-2. **Skill attribution:** Messages from deep-research skill
-3. **Research artifacts:** Level 1/2/3 reports
-4. **Problem analysis:** Root cause + recommended solution
+1. **Skill attribution:** Messages from deep-research skill
+2. **Research artifacts:** Level 1/2/3 reports
+3. **Problem analysis:** Root cause + recommended solution
 
 ## Workflow
 
@@ -32,11 +29,7 @@ Presents findings with decision menu
   ↓
 User: "Apply solution" (Option 1)
   ↓
-deep-research outputs: "Invoke plugin-improve skill"
-  ↓
-Main conversation recognizes directive
-  ↓
-Invokes plugin-improve skill
+deep-research invokes plugin-improve via Skill tool
   ↓
 plugin-improve Phase 0.45 detects research
   ↓
@@ -69,7 +62,6 @@ When handoff detected, extract:
 
 **Scan recent messages for:**
 
-- Routing directive: "Invoke plugin-improve skill"
 - Messages from deep-research skill
 - Research reports (Level 1/2/3)
 - Problem analysis (root cause + solution)

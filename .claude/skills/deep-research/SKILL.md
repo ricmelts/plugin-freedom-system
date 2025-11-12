@@ -54,17 +54,12 @@ Violation of this invariant breaks the system architecture.
 <handoff_protocol target_skill="plugin-improve">
 <trigger>User selects option 1 ("Apply solution") from decision menu</trigger>
 
-<deep_research_output>
-THIS SKILL outputs exact text:
-"User selected: Apply solution. Next step: Invoke plugin-improve skill."
-
-Then STOPS execution (no further implementation).
-</deep_research_output>
-
-<orchestrator_action>
-Main conversation sees the directive "Next step: Invoke plugin-improve skill"
-and uses Skill tool to invoke plugin-improve.
-</orchestrator_action>
+<deep_research_action>
+When user selects "Apply solution":
+1. Output confirmation: "User selected: Apply solution. Invoking plugin-improve skill..."
+2. Use Skill tool to invoke plugin-improve directly
+3. STOP execution (no further implementation)
+</deep_research_action>
 
 <context_passing>
 plugin-improve reads research findings from conversation history.
@@ -73,10 +68,11 @@ plugin-improve skips Phase 0.5 investigation (already completed by deep-research
 
 <enforcement>
 deep-research NEVER implements. Only plugin-improve implements.
+deep-research MUST invoke plugin-improve via Skill tool.
 </enforcement>
 </handoff_protocol>
 
-**Note:** The routing instruction is a directive to the main conversation. When the orchestrator sees "Invoke plugin-improve skill", it will use the Skill tool to invoke plugin-improve. This is the standard handoff protocol.
+**Note:** deep-research invokes plugin-improve directly via the Skill tool when user selects "Apply solution". This ensures the handoff happens automatically without requiring main conversation orchestration.
 
 **Why separation matters:**
 
@@ -293,9 +289,9 @@ At the end of each level (when presenting findings), MUST:
 <response_handler option="1" action="apply_solution">
 <condition>User selects option 1 ("Apply solution")</condition>
 <action>
-1. Output handoff directive: "User selected: Apply solution. Next step: Invoke plugin-improve skill."
-2. STOP execution (do not implement)
-3. Orchestrator will invoke plugin-improve skill
+1. Output confirmation: "User selected: Apply solution. Invoking plugin-improve skill..."
+2. Use Skill tool to invoke plugin-improve
+3. STOP execution (no further implementation)
 </action>
 </response_handler>
 

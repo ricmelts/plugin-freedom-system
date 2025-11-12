@@ -19,8 +19,8 @@ preconditions:
 **Integration with deep-research:**
 
 <handoff_protocol>
-**Trigger:** deep-research outputs "Invoke plugin-improve skill"
-**Detection:** Phase 0.45 scans conversation history
+**Trigger:** deep-research invokes plugin-improve via Skill tool
+**Detection:** Phase 0.45 scans conversation history for research findings
 **Action:** Extract research findings, skip investigation (Phase 0.5)
 **Benefits:** Preserve expensive research context (Opus + extended thinking)
 </handoff_protocol>

@@ -27,7 +27,7 @@
 | GainKnob | 📦 Installed | 1.2.3 | 2025-11-10 |
 | TapeAge | 📦 Installed | 1.0.2 | 2025-11-11 |
 | ClapMachine | 💡 Ideated | - | 2025-11-10 |
-| DriveVerb | 📦 Installed | 1.0.1 | 2025-11-12 |
+| DriveVerb | 📦 Installed | 1.0.2 | 2025-11-12 |
 | FlutterVerb | 📦 Installed | 1.0.0 | 2025-11-11 |
 | LushVerb | 🚧 Stage 1 | - | 2025-11-11 |
 
@@ -190,7 +190,7 @@ Mix/Output:
 ### DriveVerb
 
 **Status:** 📦 **Installed**
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Created:** 2025-11-11
 **Completed:** 2025-11-12
 **Installed:** 2025-11-12
@@ -260,6 +260,7 @@ Algorithmic reverb with warm tape saturation applied only to the wet signal, plu
 - **2025-11-12 (Stage 6):** Validation complete - 5 factory presets, CHANGELOG.md generated
 - **2025-11-12 (v1.0.0):** Installed to system folders (VST3 + AU)
 - **2025-11-12 (v1.0.1):** UI control reordering - dry/wet moved to end for standard mixing workflow
+- **2025-11-12 (v1.0.2):** Fixed knob hover shake - replaced scale transform with border color change
 
 **Known Issues:**
 - None
