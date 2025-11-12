@@ -411,6 +411,47 @@ This allows immediate visual inspection without requiring user to manually navig
 
 **Note:** Uses `open` command (macOS). On other platforms, adjust command accordingly (e.g., `xdg-open` on Linux, `start` on Windows).
 
+## Phase 5.45: Version Control Checkpoint
+
+**CRITICAL: Commit each UI version immediately after generation.**
+
+**After Phase 5.4 completes (YAML + test HTML generated and validated):**
+
+```bash
+cd plugins/[PluginName]/.ideas/mockups
+git add v[N]-ui.yaml v[N]-ui-test.html
+git commit -m "feat([PluginName]): UI mockup v[N] (design iteration)"
+```
+
+**Why commit at this point:**
+- Preserves design history between iterations
+- Each version is recoverable
+- Enables A/B comparison of different designs
+- Atomic commits per iteration (not batched)
+
+**Update workflow state (if in workflow context):**
+
+```bash
+if [ -f "plugins/[PluginName]/.ideas/.continue-here.md" ]; then
+    # Update version tracking
+    sed -i '' "s/latest_mockup_version: .*/latest_mockup_version: [N]/" .continue-here.md
+    # Keep mockup_finalized: false until user chooses "finalize"
+    git add .continue-here.md
+    git commit --amend --no-edit
+fi
+```
+
+**State tracking in `.continue-here.md`:**
+
+```markdown
+current_stage: 0
+stage_0_status: ui_design_in_progress
+latest_mockup_version: 2
+mockup_finalized: false
+```
+
+**Only proceed to Phase 5.5 after successful commit.**
+
 ---
 
 ## ⚠️ CRITICAL STOP POINT - Phase 5.5: Design Decision Menu
@@ -447,7 +488,7 @@ Choose (1-8): _
   - User resolves any issues within design-sync
   - **design-sync routes back to Phase 5.5 decision menu after completion** (see design-sync Step 7)
 - **Option 2**: User gives feedback → Return to Phase 2 with new version number (v2, v3, etc.)
-- **Option 3**: User approves → Proceed to Phase 6-9 (generate remaining 5 files)
+- **Option 3**: User approves → Proceed to Phase 6-10 (generate remaining 5 files + finalize state)
 - **Option 4**: Save aesthetic → Invoke ui-template-library skill with "save" operation
   ```
   Invoke Skill tool:
@@ -455,17 +496,17 @@ Choose (1-8): _
   - prompt: "Save aesthetic from plugins/[PluginName]/.ideas/mockups/v[N]-ui.html"
   ```
   After saving, return to decision menu
-- **Option 5**: Save aesthetic first, then proceed to Phase 6-9
+- **Option 5**: Save aesthetic first, then proceed to Phase 6-10
   ```
   1. Invoke ui-template-library "save" operation
   2. Wait for confirmation
-  3. Proceed to Phase 6-9 (generate implementation files)
+  3. Proceed to Phase 6-10 (generate implementation files)
   ```
 - **Option 6**: Offer to open test HTML in browser for interactive review
 - **Option 7**: Validate WebView constraints (run Phase 5.3 checks again)
 - **Option 8**: Other
 
-**Only execute Phases 6-10 if user chose option 3 (finalize).**
+**Only execute Phases 6-10 if user chose option 3 or 5 (finalize).**
 
 ---
 
@@ -790,6 +831,54 @@ juce_add_binary_data(${PLUGIN_NAME}_UIResources
 
 **See:** `assets/parameter-spec-template.md`
 
+## Phase 10.5: Finalization Commit
+
+**CRITICAL: Commit all implementation files and update workflow state.**
+
+**After Phase 10 completes (all 7 files generated):**
+
+```bash
+cd plugins/[PluginName]/.ideas/mockups
+git add v[N]-ui.html v[N]-PluginEditor.h v[N]-PluginEditor.cpp v[N]-CMakeLists.txt v[N]-integration-checklist.md
+
+# If parameter-spec.md was created (v1 only)
+if [ -f "../parameter-spec.md" ]; then
+    git add ../parameter-spec.md
+fi
+
+git commit -m "feat([PluginName]): UI mockup v[N] finalized (implementation files)"
+```
+
+**Update workflow state (if in workflow context):**
+
+```bash
+if [ -f "plugins/[PluginName]/.ideas/.continue-here.md" ]; then
+    # Update finalization status
+    sed -i '' "s/mockup_finalized: .*/mockup_finalized: true/" .continue-here.md
+    sed -i '' "s/finalized_version: .*/finalized_version: [N]/" .continue-here.md
+    sed -i '' "s/stage_0_status: .*/stage_0_status: ui_design_complete/" .continue-here.md
+
+    git add .continue-here.md
+    git commit --amend --no-edit
+fi
+```
+
+**Updated state in `.continue-here.md`:**
+
+```markdown
+current_stage: 0
+stage_0_status: ui_design_complete
+latest_mockup_version: 2
+mockup_finalized: true
+finalized_version: 2
+```
+
+**Why this matters:**
+- Marks design phase as complete
+- Enables `/continue` to resume at Stage 1
+- Records which version was finalized (if multiple exist)
+- Atomic commit of all implementation files
+
 ## After Completing All Phases
 
 Once user has finalized a design and all 7 files are generated, present this menu:
@@ -840,7 +929,9 @@ plugins/[Name]/.ideas/mockups/
 **Design phase successful when:**
 - ✅ YAML spec generated matching user requirements
 - ✅ Browser test HTML works (interactive controls, parameter messages)
-- ✅ User presented with Phase 4.5 decision menu
+- ✅ Design files committed to git (Phase 5.45)
+- ✅ `.continue-here.md` updated with version number (if in workflow)
+- ✅ User presented with Phase 5.5 decision menu
 - ✅ Design approved OR user iterates with refinements
 
 **Implementation phase successful when (after finalization):**
@@ -848,6 +939,8 @@ plugins/[Name]/.ideas/mockups/
 - ✅ Production HTML is complete (no placeholder content)
 - ✅ C++ boilerplate matches YAML structure (correct parameter bindings)
 - ✅ parameter-spec.md generated and locked (for v1 only)
+- ✅ Implementation files committed to git (Phase 10.5)
+- ✅ `.continue-here.md` updated with finalization status (if in workflow)
 
 ## Integration Points
 
