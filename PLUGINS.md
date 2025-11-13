@@ -31,7 +31,7 @@
 | FlutterVerb | 📦 Installed | 1.0.3 | 2025-11-12 |
 | LushVerb | 📦 Installed | 1.0.0 | 2025-11-12 |
 | OrganicHats | 📦 Installed | 1.0.0 | 2025-11-12 |
-| DrumRoulette | ✅ Working | 1.0.0 | 2025-11-12 |
+| DrumRoulette | 📦 Installed | 1.0.0 | 2025-11-12 |
 
 ### GainKnob
 
@@ -504,10 +504,11 @@ Global:
 
 ### DrumRoulette
 
-**Status:** ✅ **Working**
+**Status:** 📦 **Installed**
 **Version:** 1.0.0
 **Created:** 2025-11-12
 **Completed:** 2025-11-12
+**Installed:** 2025-11-12
 **Type:** Instrument (Drum Sampler)
 **Complexity:** 5.0 / 5.0 (maximum - phased implementation)
 
@@ -571,6 +572,10 @@ Per-Slot (×8):
 - ✓ GUI bindings: 64 parameter attachments (8 slots × 8 params) - 100% contract compliance
 
 **Formats:** VST3, AU, Standalone
+
+**Installation Locations:**
+- VST3: `~/Library/Audio/Plug-Ins/VST3/DrumRoulette.vst3` (5.5 MB)
+- AU: `~/Library/Audio/Plug-Ins/Components/DrumRoulette.component` (5.4 MB)
 
 **Known Issues:**
 - None
