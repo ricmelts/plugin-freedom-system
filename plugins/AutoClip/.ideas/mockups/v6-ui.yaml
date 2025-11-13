@@ -1,0 +1,108 @@
+window:
+  width: 300
+  height: 450
+  resizable: false
+
+controls:
+  - id: clipThreshold
+    type: rotary_knob
+    position: { x: 55, y: 130 }
+    size: { width: 190, height: 190 }
+    center_y: 225
+    range: [0.0, 100.0]
+    default: 0.0
+    label: none
+    value_display: false
+    rotation_behavior: texture_only
+    lighting_fixed: true
+
+  - id: soloClipped
+    type: toggle
+    position: { x: 110, y: 362 }
+    center_y: 381
+    size: { width: 80, height: 38 }
+    default: false
+    label: "CLIP SOLO"
+    label_position: below
+
+styling:
+  theme: vintage_bakelite
+  colors:
+    background_primary: "#2a1808"
+    background_secondary: "#1a0800"
+    background_outer: "#000"
+    knob_base_color: "#4a3a2a"
+    indicator_color: "#d4b494"
+    indicator_secondary: "#a88870"
+    toggle_thumb: "#987860"
+    toggle_track_inactive: "#3a2010"
+    toggle_track_active: "#5a4030"
+    border_color: "#2a1408"
+    border_outer: "#4a3020"
+    stitch_color: "rgba(212, 180, 148, 0.15)"
+    text_primary: "#986a4a"
+    title_color: "#a88870"
+
+  texture:
+    noise_enabled: true
+    noise_base_frequency: 2.3
+    noise_octaves: 3
+    noise_opacity: 0.35
+    rotates_with_knob: true
+    blend_mode: multiply
+
+  lighting:
+    type: radial_gradient
+    position: "30% 25%"
+    fixed: true
+    layers:
+      - "rgba(106, 74, 42, 0.8)"
+      - "rgba(90, 58, 26, 0.6) 40%"
+      - "rgba(58, 32, 16, 0.3) 70%"
+      - "transparent 100%"
+
+  typography:
+    font_family: "system-ui, sans-serif"
+    text_transform: uppercase
+    letter_spacing: "0.25em"
+    label_size: "11px"
+    title_size: "20px"
+    title_weight: "700"
+
+  effects:
+    border_radius: 4
+    shadow_fixed: true
+    shadow_outset: "0 10px 20px rgba(0, 0, 0, 0.7)"
+    shadow_inset_top: "inset 0 4px 4px rgba(90, 58, 26, 0.3)"
+    shadow_inset_bottom: "inset 0 -4px 4px rgba(0, 0, 0, 0.8)"
+    stitch_inset: "8px"
+    stitch_style: "dashed"
+    hover_illumination: false
+
+layout:
+  plugin_title: "AUTOCLIP"
+  title_position: "top: 40px"
+  title_letter_spacing: "0.25em"
+  container_fixed: true
+  aspect_ratio: "portrait"
+  vertical_centering:
+    knob_center_y: 225
+    toggle_center_y: 381
+    spacing_calculated: true
+
+interaction:
+  knob_rotation_model: physical_realistic
+  texture_behavior: rotates_with_surface
+  lighting_behavior: fixed_source
+  hover_effects: none
+
+parameters:
+  - name: clipThreshold
+    type: Float
+    range: [0.0, 100.0]
+    default: 0.0
+    units: "%"
+
+  - name: soloClipped
+    type: Bool
+    default: false
