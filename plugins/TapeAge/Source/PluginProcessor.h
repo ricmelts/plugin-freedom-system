@@ -59,7 +59,7 @@ private:
     juce::dsp::IIR::Filter<float> ageFilter[2];  // High-frequency rolloff per channel (v1.1.0)
 
     // Phase 4.4: Dry/Wet Mixing
-    juce::dsp::DryWetMixer<float> dryWetMixer;
+    juce::dsp::DryWetMixer<float> dryWetMixer { 20000 };  // Max latency: 192kHz * 0.1s delay line + oversampler
 
     // Parameter layout creation
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

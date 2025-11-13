@@ -4,6 +4,19 @@ All notable changes to TapeAge will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.4] - 2025-11-13
+
+### Fixed
+
+- **Dry/Wet Slap-Back Delay:** Eliminated ~100ms slap-back echo when mixing dry and wet signals at intermediate mix values
+  - **Root Cause:** DryWetMixer constructed with default `maximumWetLatencyInSamples = 0`, preventing internal dry delay buffer from compensating for wet signal processing latency (~4850 samples at 48kHz: oversampler + 100ms delay line). The `setWetLatency()` call in `prepareToPlay()` was silently clamped to 0, leaving dry signal immediate while wet signal arrived 100ms late.
+  - **Solution:** Initialize DryWetMixer with 20,000 sample capacity at construction time: `dryWetMixer { 20000 }` (supports up to 192kHz sample rate × 0.1s delay line + oversampler latency)
+  - **Technical Details:** JUCE's DryWetMixer requires maximum latency specified at construction - cannot be changed afterward. Default constructor sets internal capacity to 0. Previous v1.1.1 attempt (never committed) incorrectly assumed calculation was the issue, but the real problem was insufficient buffer allocation.
+  - **User Impact:** At 50/50 mix, dry and wet signals now arrive simultaneously instead of creating "kick drums bouncing off walls" echo effect. Mix parameter works correctly across all ratios (0-100%).
+  - **Investigation:** Deep-research Level 2 analysis confirmed via JUCE source code examination (`/Applications/JUCE/modules/juce_dsp/processors/juce_DryWetMixer.h:123`)
+  - **Testing:** Manual DAW testing with dry/wet at 50% confirms no audible slap-back delay
+  - **Backward Compatibility:** Zero impact on saved presets or parameter values - latency compensation is transparent to user
+
 ## [1.1.0] - 2025-11-12
 
 ### Added

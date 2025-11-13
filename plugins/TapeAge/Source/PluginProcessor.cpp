@@ -97,9 +97,11 @@ void TapeAgeAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     dryWetMixer.prepare(currentSpec);
     dryWetMixer.reset();
 
-    // Set wet latency to compensate for oversampler latency (architecture.md line 134)
+    // Set wet latency to compensate for oversampler + delay line latency
     int oversamplerLatency = static_cast<int>(oversampler.getLatencyInSamples());
-    dryWetMixer.setWetLatency(static_cast<float>(oversamplerLatency));
+    int delayLineLatency = static_cast<int>(sampleRate * 0.1);  // 100ms base delay from wow/flutter
+    int totalWetLatency = oversamplerLatency + delayLineLatency;
+    dryWetMixer.setWetLatency(static_cast<float>(totalWetLatency));
 }
 
 void TapeAgeAudioProcessor::releaseResources()
