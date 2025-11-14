@@ -49,6 +49,14 @@ private:
         float phase2 = 0.0f;  // +7 cents
         float phase3 = 0.0f;  // -7 cents
 
+        // FM feedback memory (1-sample delay per oscillator)
+        float previousOutput1 = 0.0f;
+        float previousOutput2 = 0.0f;
+        float previousOutput3 = 0.0f;
+
+        // Low-pass filter per voice
+        juce::dsp::IIR::Filter<float> filter;
+
         juce::ADSR adsr;
         juce::ADSR::Parameters adsrParams;
 
@@ -58,6 +66,8 @@ private:
             currentNote = -1;
             currentVelocity = 0.0f;
             phase1 = phase2 = phase3 = 0.0f;
+            previousOutput1 = previousOutput2 = previousOutput3 = 0.0f;
+            filter.reset();
             adsr.reset();
         }
     };

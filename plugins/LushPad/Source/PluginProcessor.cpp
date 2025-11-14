@@ -46,13 +46,19 @@ LushPadAudioProcessor::~LushPadAudioProcessor()
 
 void LushPadAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    juce::ignoreUnused(samplesPerBlock);
     currentSampleRate = sampleRate;
 
-    // Initialize all voices and set ADSR sample rate
+    // Prepare DSP spec for filters
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+    spec.numChannels = 1;  // Mono per-voice filtering
+
+    // Initialize all voices with filter preparation
     for (auto& voice : voices)
     {
         voice.adsr.setSampleRate(sampleRate);
+        voice.filter.prepare(spec);
         voice.reset();
     }
 }
@@ -89,6 +95,16 @@ void LushPadAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         }
     }
 
+    // Read parameters (atomic, done once per buffer for efficiency)
+    float timbreValue = parameters.getRawParameterValue("timbre")->load();
+    float filterCutoffValue = parameters.getRawParameterValue("filter_cutoff")->load();
+
+    // Map timbre to FM feedback depth (0.0-0.4 range for musicality)
+    float feedbackDepth = timbreValue * 0.4f;
+
+    // Map timbre to saturation gain (1.0-3.0 range)
+    float saturationGain = 1.0f + (timbreValue * 2.0f);
+
     // Generate audio per-sample
     const int numSamples = buffer.getNumSamples();
 
@@ -114,13 +130,41 @@ void LushPadAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
             float ratio2 = 1.00407f;   // +7 cents
             float ratio3 = 0.99593f;   // -7 cents
 
-            // Generate 3 detuned sine oscillators
-            float osc1 = std::sin(voice.phase1);
-            float osc2 = std::sin(voice.phase2);
-            float osc3 = std::sin(voice.phase3);
+            // Generate 3 detuned sine oscillators WITH FM feedback
+            // Formula: sin(phase + feedbackDepth * previousOutput)
+            float osc1 = std::sin(voice.phase1 + feedbackDepth * voice.previousOutput1);
+            float osc2 = std::sin(voice.phase2 + feedbackDepth * voice.previousOutput2);
+            float osc3 = std::sin(voice.phase3 + feedbackDepth * voice.previousOutput3);
+
+            // Store outputs for next sample's feedback
+            voice.previousOutput1 = osc1;
+            voice.previousOutput2 = osc2;
+            voice.previousOutput3 = osc3;
 
             // Sum oscillators (average to prevent clipping)
             float voiceOutput = (osc1 + osc2 + osc3) / 3.0f;
+
+            // Apply harmonic saturation using tanh waveshaping
+            voiceOutput = std::tanh(saturationGain * voiceOutput);
+
+            // Calculate velocity-scaled filter cutoff
+            // Soft notes (low velocity): darker sound (cutoff reduced by 50%)
+            // Hard notes (high velocity): brighter sound (cutoff at parameter value)
+            float velocityScaledCutoff = filterCutoffValue * (0.5f + 0.5f * voice.currentVelocity);
+
+            // Clamp to valid range
+            velocityScaledCutoff = juce::jlimit(20.0f, 20000.0f, velocityScaledCutoff);
+
+            // Update filter coefficients (12dB/octave low-pass, Q=0.35)
+            auto coefficients = juce::dsp::IIR::Coefficients<float>::makeLowPass(
+                currentSampleRate,
+                velocityScaledCutoff,
+                0.35f  // Fixed resonance
+            );
+            *voice.filter.coefficients = *coefficients;
+
+            // Process through filter
+            voiceOutput = voice.filter.processSample(voiceOutput);
 
             // Apply ADSR envelope
             float envelope = voice.adsr.getNextSample();
