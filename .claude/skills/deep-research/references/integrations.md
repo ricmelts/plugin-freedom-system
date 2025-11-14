@@ -74,8 +74,8 @@ If user chooses "Yes":
 
 **The feedback loop:**
 
-1. Level 3 research solves complex problem (45 min)
+1. Level 3 research solves complex problem
 2. plugin-improve applies solution
 3. Document solution → troubleshooting/
-4. Similar problem occurs → Level 1 finds it (5 min)
+4. Similar problem occurs → Level 1 finds it instantly
 5. Knowledge compounds, research gets faster over time

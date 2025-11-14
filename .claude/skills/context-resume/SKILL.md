@@ -1,6 +1,6 @@
 ---
 name: context-resume
-description: Load plugin context from handoff files to resume work. Invoked by /continue command, 'resume [PluginName]', or natural language continuation requests. Locates handoff across 2 locations, parses state, presents summary, and routes to appropriate continuation skill.
+description: Load plugin context from handoff files to resume work. Invoked by /continue command, 'resume [PluginName]', 'continue working on [PluginName]', 'pick up where I left off with [PluginName]', or 'show me where [PluginName] is at'. Locates handoff across 2 locations, parses state, presents summary, and routes to appropriate continuation skill.
 allowed-tools:
   - Read
   - Bash
@@ -196,7 +196,7 @@ MUST NOT write:
 - PLUGINS.md
 - Any source code or contract files
 
-Continuation skills invoked by this skill will handle all state updates.
+**Why:** This skill is an orchestrator - state updates are handled by the continuation skills it delegates to (plugin-workflow, plugin-ideation, ui-mockup, plugin-improve, etc.). Orchestrators read state and route; implementation skills update state and execute checkpoints. See Checkpoint Protocol in CLAUDE.md for state update requirements in implementation skills.
 
 </state_requirement>
 

@@ -24,7 +24,6 @@
 ## Stage Breakdown
 
 ### Stage 1: Foundation + Shell
-**Duration:** [15-20 minutes]
 **Deliverables:**
 - CMakeLists.txt configuration
 - Basic JUCE project structure
@@ -35,60 +34,47 @@
 - Build system verification
 
 ### Stage 2: DSP Implementation
-**Duration:** [Estimate based on complexity]
 
 **Implementation Strategy:** [Single-pass | Multi-phase]
 
 #### [If Multi-phase] Phase Breakdown:
 
 **Phase 2.1: [Phase Name]**
-- Duration: [Estimate]
 - Components: [List from architecture.md]
 - Parameters: [Which parameters implemented]
 - Success criteria: [What makes this phase complete]
 
 **Phase 2.2: [Phase Name]**
-- Duration: [Estimate]
 - Components: [List from architecture.md]
 - Parameters: [Which parameters implemented]
 - Success criteria: [What makes this phase complete]
 
 **Phase 2.3: [Phase Name]** (if needed)
-- Duration: [Estimate]
 - Components: [List from architecture.md]
 - Parameters: [Which parameters implemented]
 - Success criteria: [What makes this phase complete]
 
 ### Stage 3: GUI Implementation
-**Duration:** [Estimate based on UI complexity]
 
 **Implementation Strategy:** [Single-pass | Multi-phase]
 
 #### [If Multi-phase] Phase Breakdown:
 
 **Phase 3.1: Basic Layout**
-- Duration: [Estimate]
 - Focus: Core structure and parameter bindings
 
 **Phase 3.2: Visual Feedback** (if needed)
-- Duration: [Estimate]
 - Focus: Meters, visualizations, animations
 
 **Phase 3.3: Polish** (if needed)
-- Duration: [Estimate]
 - Focus: Refinements and edge cases
 
 ### Stage 4: Validation
-**Duration:** [20-40 minutes]
 **Deliverables:**
 - Pluginval compliance check
 - Factory presets
 - Documentation finalization
 - Manual testing checklist
-
-## Total Estimated Duration
-
-**Total:** [Sum of all stages] ([X-Y hours])
 
 ## Risk Factors
 

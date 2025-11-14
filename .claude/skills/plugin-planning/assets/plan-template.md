@@ -35,15 +35,13 @@
 
 [Use this format for simple plugins - single-pass implementation]
 
-### Estimated Duration
+### Implementation Flow
 
-Total: ~[X] minutes
-
-- Stage 1: 5 min (Foundation - project structure)
-- Stage 2: 5 min (Shell - APVTS parameters)
-- Stage 3: [X] min (DSP - single pass)
-- Stage 4: [X] min (GUI - single pass)
-- Stage 4: 15 min (Validation - presets, pluginval, changelog)
+- Stage 1: Foundation - project structure
+- Stage 2: Shell - APVTS parameters
+- Stage 3: DSP - single pass
+- Stage 4: GUI - single pass
+- Stage 4: Validation - presets, pluginval, changelog
 
 ### Implementation Notes
 
@@ -80,8 +78,6 @@ Total: ~[X] minutes
 - [ ] [Component 2] parameter works correctly
 - [ ] No artifacts or discontinuities
 
-**Duration:** [X] min
-
 ---
 
 #### Phase 4.2: Parameter Modulation
@@ -97,8 +93,6 @@ Total: ~[X] minutes
 - [ ] Parameter modulation is smooth without clicks
 - [ ] Modulation depth scales correctly
 - [ ] [Specific modulation behavior test]
-
-**Duration:** [X] min
 
 ---
 
@@ -117,8 +111,6 @@ Total: ~[X] minutes
 - [ ] [Feature 2] integrates without artifacts
 - [ ] Performance acceptable with all features active
 - [ ] Edge cases handled correctly
-
-**Duration:** [X] min
 
 ---
 
@@ -140,8 +132,6 @@ Total: ~[X] minutes
 - [ ] Layout matches mockup design
 - [ ] Background and styling render properly
 
-**Duration:** [X] min
-
 ---
 
 #### Phase 5.2: Parameter Binding and Interaction
@@ -160,8 +150,6 @@ Total: ~[X] minutes
 - [ ] Preset changes update all UI elements
 - [ ] Parameter values display correctly
 - [ ] No lag or visual glitches
-
-**Duration:** [X] min
 
 ---
 
@@ -182,25 +170,21 @@ Total: ~[X] minutes
 - [ ] Performance acceptable (no CPU spikes)
 - [ ] Visual polish and smoothness
 
-**Duration:** [X] min
-
 ---
 
-### Estimated Duration
+### Implementation Flow
 
-Total: ~[X] hours
-
-- Stage 1: 5 min (Foundation - project structure)
-- Stage 2: 5 min (Shell - APVTS parameters)
-- Stage 3: [X] min (DSP - [N] phases)
-  - Phase 4.1: [X] min
-  - Phase 4.2: [X] min
-  - Phase 4.3: [X] min (if applicable)
-- Stage 4: [X] min (GUI - [N] phases)
-  - Phase 5.1: [X] min
-  - Phase 5.2: [X] min
-  - Phase 5.3: [X] min (if applicable)
-- Stage 4: 20 min (Validation - presets, pluginval, changelog)
+- Stage 1: Foundation - project structure
+- Stage 2: Shell - APVTS parameters
+- Stage 3: DSP - [N] phases
+  - Phase 4.1
+  - Phase 4.2
+  - Phase 4.3 (if applicable)
+- Stage 4: GUI - [N] phases
+  - Phase 5.1
+  - Phase 5.2
+  - Phase 5.3 (if applicable)
+- Stage 4: Validation - presets, pluginval, changelog
 
 ---
 

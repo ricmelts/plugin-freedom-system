@@ -8,8 +8,6 @@
 
 **Goal:** Ready to install and use
 
-**Duration:** 10-20 minutes
-
 **Preconditions:**
 
 - Stages 0-5 complete

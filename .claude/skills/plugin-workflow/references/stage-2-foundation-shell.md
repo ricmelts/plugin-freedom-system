@@ -8,8 +8,6 @@
 
 **Goal:** Create plugin structure that compiles with full parameter system
 
-**Duration:** 7 minutes (combined foundation + shell)
-
 **Preconditions:**
 
 - Stage 1 complete (plan.md exists)

@@ -5,18 +5,18 @@
 ```
 How would you like to test {PLUGIN_NAME}?
 
-1. Automated stability tests (~2 min)
+1. Automated stability tests
    → Quick C++ unit tests (requires Tests/ directory)
    → Validates core functionality and edge cases
    → Best for: plugins with test infrastructure
 
-2. Build + pluginval (~5-10 min) ⭐ RECOMMENDED
+2. Build + pluginval ⭐ RECOMMENDED
    → Industry-standard validation at strictness level 10
    → Tests VST3 and AU formats
    → Catches 99% of issues before DAW testing
    → Required before distribution
 
-3. Manual DAW testing (~30-60 min)
+3. Manual DAW testing
    → Hands-on testing in your DAW
    → Custom checklist based on plugin features
    → Best for: final validation and sound quality checks

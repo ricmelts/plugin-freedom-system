@@ -139,10 +139,9 @@ without over-researching simple problems. Auto-escalates based on confidence.
   </not_appropriate_for>
 
   <efficiency_rationale>
-    - 40% of problems solved at Level 1 (5 min) - Known solutions
-    - 40% of problems solved at Level 2 (20 min) - Forum/GitHub documented
-    - 20% of problems require Level 3 (45 min) - Novel/complex research
-    - Average weighted resolution: ~15 minutes
+    - 40% of problems solved at Level 1 (quick) - Known solutions
+    - 40% of problems solved at Level 2 (moderate) - Forum/GitHub documented
+    - 20% of problems require Level 3 (deep) - Novel/complex research
     - Knowledge base compounds: Level 3 today becomes Level 1 tomorrow
   </efficiency_rationale>
 </usage_guidance>

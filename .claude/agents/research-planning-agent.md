@@ -896,10 +896,10 @@ git log -1 --format='✓ Committed: %h - Stage 0 complete'
 ## Notes
 
 - **No implementation** - Research and planning only (code happens in Stages 1-3)
-- **Consolidated workflow** - Both architecture and plan created in single pass (saves 15k tokens and 1 minute)
+- **Consolidated workflow** - Both architecture and plan created in single pass
 - **Extended thinking enabled** - 10000 token budget for deep reasoning
-- **Context isolation** - Fresh context for each Stage 0 session (5-30 min)
-- **Graduated depth** - Research time scales with complexity (Tier 1: 5 min, Tier 6: 30 min)
+- **Context isolation** - Fresh context for each Stage 0 session
+- **Graduated depth** - Research depth scales with complexity (Tier 1: quick, Tier 6: deep)
 - **Per-feature iteration** - Document each feature immediately after research (prevents information loss)
 - **JUCE 8 focus** - Context7-MCP for API docs (NOT WebSearch)
 

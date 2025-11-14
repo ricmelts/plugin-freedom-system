@@ -82,9 +82,9 @@ What's next?
 
 This creates a compounding knowledge system:
 
-1. First time you solve "Plugin X crashes on parameter change" → Research (30 min)
-2. Document the solution → troubleshooting/runtime-issues/crashes-on-param.md (5 min)
-3. Next time similar issue occurs → Quick lookup (2 min)
+1. First time you solve "Plugin X crashes on parameter change" → Research
+2. Document the solution → troubleshooting/runtime-issues/crashes-on-param.md
+3. Next time similar issue occurs → Quick lookup
 4. Knowledge compounds → System gets smarter
 
 The feedback loop:

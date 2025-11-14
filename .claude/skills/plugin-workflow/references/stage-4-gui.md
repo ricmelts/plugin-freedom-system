@@ -8,8 +8,6 @@
 
 **Goal:** Integrate WebView UI with parameter bindings
 
-**Duration:** 20-60 minutes (depending on complexity)
-
 **Preconditions:**
 
 - Stage 2 complete and tests passed (DSP operational)

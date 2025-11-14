@@ -45,9 +45,10 @@ private:
         float readPosition = 0.0f;      // Position in delay buffer (fractional samples)
         float windowPosition = 0.0f;    // Position in window envelope (0.0-1.0)
         int grainSizeSamples = 0;       // Duration of this grain in samples
+        float playbackRate = 1.0f;      // Phase 3.2: Playback speed (pitch shift)
         bool active = false;            // Is this voice currently playing?
 
-        // Phase 3.1: No pitch shift, no pan, no reverse (forward playback only)
+        // Phase 3.3: Will add pan position and reverse flag
     };
 
     // DSP components (declare BEFORE parameters for initialization order)
@@ -72,11 +73,17 @@ private:
     double currentSampleRate = 44100.0;
     int currentDelayBufferSize = 0;
 
+    // Phase 3.2: Scale quantization lookup tables
+    static constexpr int numScales = 5;
+    std::array<std::vector<int>, numScales> scaleIntervals;
+
     // Helper methods
-    void spawnNewGrain(float grainSizeMs);
-    void updateGrainScheduler(float densityPercent, float grainSizeMs);
+    void spawnNewGrain(float grainSizeMs, float pitchRandomPercent, int scaleIndex, int rootNote);
+    void updateGrainScheduler(float densityPercent, float grainSizeMs, float pitchRandomPercent, int scaleIndex, int rootNote);
     void processGrainVoices(juce::AudioBuffer<float>& buffer);
     void generateHannWindow(int sizeInSamples);
+    void initializeScaleTables();
+    int quantizePitchToScale(float pitchSemitones, int scaleIndex, int rootNote);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScatterAudioProcessor)
 };

@@ -537,11 +537,11 @@ Analyze request and select tier automatically. Never ask user which tier.
 
 | Priority | Condition | Tier |
 |----------|-----------|------|
-| 1 | Known pattern in troubleshooting/ | Tier 1 (5-10 min) |
-| 2 | Keywords: "crash", "performance", "architecture", "all plugins" | Tier 3 (30-60 min, delegate) |
-| 3 | Scope: Multiple components OR unclear cause | Tier 3 (30-60 min, delegate) |
-| 4 | Scope: Single file + clear symptom | Tier 2 (15-30 min) |
-| 5 | Keywords: "cosmetic", "typo", "rename", "color", "text" | Tier 1 (5-10 min) |
+| 1 | Known pattern in troubleshooting/ | Tier 1 (quick) |
+| 2 | Keywords: "crash", "performance", "architecture", "all plugins" | Tier 3 (complex, delegate) |
+| 3 | Scope: Multiple components OR unclear cause | Tier 3 (complex, delegate) |
+| 4 | Scope: Single file + clear symptom | Tier 2 (moderate) |
+| 5 | Keywords: "cosmetic", "typo", "rename", "color", "text" | Tier 1 (quick) |
 | 6 | Default (if no matches) | Tier 1, escalate if needed |
 
 Log selected tier: "Analyzing issue (quick investigation)..." or "Analyzing issue (deep investigation)..."

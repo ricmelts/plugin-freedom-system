@@ -8,7 +8,7 @@
 
 ## Error 1: No Handoff Found
 
-**Scenario:** `.continue-here.md` doesn't exist in any of the 3 locations.
+**Scenario:** `.continue-here.md` doesn't exist in any of the 2 locations.
 
 **Response:**
 

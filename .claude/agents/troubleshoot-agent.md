@@ -86,7 +86,7 @@ Error: expected ';' before '}' token at line 42
 → STOP, don't research further
 ```
 
-### Level 1: Local Troubleshooting Docs (1-2 minutes)
+### Level 1: Local Troubleshooting Docs
 
 **Why:** Pre-validated solutions that already worked in this workspace.
 
@@ -126,7 +126,7 @@ Problem: FlexBox layout broken, sliders overlapping
 → STOP, use validated solution
 ```
 
-### Level 2: Context7 Official Docs (3-5 minutes)
+### Level 2: Context7 Official Docs
 
 **Why:** Official JUCE documentation is authoritative and up-to-date.
 
@@ -165,7 +165,7 @@ Problem: How to use juce::dsp::Compressor?
 → STOP, use official guidance
 ```
 
-### Level 3: Web Research (10-15 minutes)
+### Level 3: Web Research
 
 **Only reaches this level if:**
 

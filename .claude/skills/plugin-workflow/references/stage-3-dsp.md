@@ -8,8 +8,6 @@
 
 **Goal:** Implement audio processing, parameters control DSP
 
-**Duration:** 15-45 minutes (depending on complexity)
-
 **Preconditions:**
 
 - Stage 1 complete (parameters implemented)
@@ -569,8 +567,8 @@ Status: Ready for UI integration
 
 What type of interface do you want?
 
-1. Add custom UI - Create WebView interface with mockup (15 min)
-2. Ship headless - Use DAW controls only (fast, v1.0.0 in ~3 min)
+1. Add custom UI - Create WebView interface with mockup
+2. Ship headless - Use DAW controls only (fast path to v1.0.0)
 3. Test audio in DAW - Listen to your processing
 4. Review DSP code - See implementation details
 5. Pause workflow - Resume anytime
@@ -620,7 +618,7 @@ function handleGuiPath(pluginName: string, complexityScore: number) {
 No finalized UI mockup found for ${pluginName}.
 
 Would you like to:
-1. Create mockup now - Run ui-mockup skill (15 min)
+1. Create mockup now - Run ui-mockup skill
 2. Use existing mockup - I'll tell you which version
 3. Skip GUI for now - Return to decision menu
 4. Other

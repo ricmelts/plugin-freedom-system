@@ -722,13 +722,11 @@ for (const auto metadata : midiMessages)
 - Highest CPU cost and artifact risk
 
 **Recommended approach:**
-1. **Phase 1 - Validate concept:** Implement delay-based pitch shift + reverb (LOW risk, 1-2 hours)
-2. **Phase 2 - Build foundation:** Implement feedback loop and dry/wet mixing (MEDIUM risk, 2-3 hours)
-3. **Phase 3 - Core implementation:** Replace delay-based with phase vocoder (HIGH risk, 8-12 hours)
-4. **Phase 4 - Fallback testing:** If phase vocoder fails, implement granular synthesis (MEDIUM risk, 4-6 hours)
-5. **Phase 5 - Polish:** Optimize CPU, tune parameters, reduce artifacts (2-4 hours)
-
-**Total estimated time:** 17-27 hours with fallbacks, 13-20 hours if phase vocoder succeeds on first attempt
+1. **Phase 1 - Validate concept:** Implement delay-based pitch shift + reverb (LOW risk)
+2. **Phase 2 - Build foundation:** Implement feedback loop and dry/wet mixing (MEDIUM risk)
+3. **Phase 3 - Core implementation:** Replace delay-based with phase vocoder (HIGH risk)
+4. **Phase 4 - Fallback testing:** If phase vocoder fails, implement granular synthesis (MEDIUM risk)
+5. **Phase 5 - Polish:** Optimize CPU, tune parameters, reduce artifacts
 ```
 
 ---
@@ -786,7 +784,7 @@ for (const auto metadata : midiMessages)
 
 **When to revisit:**
 - If CPU usage exceeds 80% single core (implement quality vs. performance modes)
-- If implementation takes >16 hours (consider granular synthesis fallback)
+- If implementation proves too complex (consider granular synthesis fallback)
 - If artifacts are unacceptable despite tuning (consider Rubber Band Library)
 ```
 

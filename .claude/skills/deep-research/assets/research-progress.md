@@ -11,7 +11,7 @@ Use this template to track progress through graduated research protocol.
 
 ---
 
-## Level 1 Progress (5-10 min)
+## Level 1 Progress (Quick Investigation)
 
 - [ ] Parse research topic (extract keywords, JUCE components, problem type)
 - [ ] Search local troubleshooting docs (grep -r, check by-symptom/)
@@ -28,7 +28,7 @@ Use this template to track progress through graduated research protocol.
 
 ---
 
-## Level 2 Progress (15-30 min)
+## Level 2 Progress (Moderate Investigation)
 
 - [ ] Context7 deep-dive (module docs, code examples, patterns)
 - [ ] JUCE forum search via WebSearch
@@ -47,7 +47,7 @@ Use this template to track progress through graduated research protocol.
 
 ---
 
-## Level 3 Progress (30-60 min)
+## Level 3 Progress (Deep Investigation)
 
 - [ ] Identify 2-3 research approaches
 - [ ] Spawn Subagent 1: [Focus/goal]

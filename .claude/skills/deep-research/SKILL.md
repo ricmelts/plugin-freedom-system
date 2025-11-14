@@ -1,6 +1,6 @@
 ---
 name: deep-research
-description: Multi-agent parallel investigation for complex JUCE problems
+description: Multi-agent parallel investigation for complex JUCE problems. Use when troubleshooting fails after Level 3, problems require novel research, or user requests /research command.
 model: claude-opus-4-1-20250805 # Base skill model (overridden by Task tool at Level 3)
 allowed-tools:
   - Read # Local troubleshooting docs
@@ -11,19 +11,6 @@ preconditions:
   - Problem is non-trivial (quick Context7 lookup insufficient)
 extended-thinking: false # Levels 1-2 use standard reasoning
 timeout: 3600 # 60 min max
----
-
-## Architecture Note: Model and Extended Thinking
-
-**Levels 1-2**: Run on base skill model (Sonnet 4.5) with standard reasoning
-- YAML `extended-thinking: false` prevents automatic extended thinking
-- Fast, token-efficient for 80% of problems
-
-**Level 3**: Spawn subagents with explicit model override via Task tool
-- Task tool parameters: `model: claude-opus-4-1-20250805` and `extended_thinking: 15000`
-- YAML settings do NOT apply to subagents - Task parameters override
-- This ensures Levels 1-2 stay fast/cheap while Level 3 gets maximum reasoning power
-
 ---
 
 # deep-research Skill
@@ -164,129 +151,39 @@ Invoked by: troubleshooter (Level 4), `/research [topic]`, build-automation "Inv
 
 ## Level 1: Quick Check (5-10 min, Sonnet, no extended thinking)
 
-Search local docs + Context7 for known solutions.
+**Goal:** Find quick answer from local knowledge base or JUCE API docs
+
+**Sources:** Local troubleshooting docs, Context7 JUCE documentation
+
+**Exit criteria:** HIGH confidence solution → present decision menu, otherwise escalate to Level 2
 
 See `references/research-protocol.md#level-1-quick-check` for detailed process.
-
-<success_criteria level="1">
-- Found exact match in local docs OR clear API documentation
-- HIGH confidence (80%+)
-- Solution directly applicable without modification
-</success_criteria>
-
-<critical_sequence name="level1_quick_check" enforce_order="strict">
-<step number="1" required="true">Parse research topic (keywords, JUCE components, problem type)</step>
-<step number="2" required="true">Search local troubleshooting docs</step>
-<step number="3" required="true">Check Context7 JUCE docs</step>
-<step number="4" required="true">Assess confidence (HIGH/MEDIUM/LOW)</step>
-
-<decision_gate name="level1_outcome" enforce="strict">
-IF confidence = HIGH:
-  THEN present decision menu with solution
-  WAIT for user selection
-
-ELSE IF confidence IN [MEDIUM, LOW]:
-  THEN auto-escalate to Level 2
-  OUTPUT notification: "Level 1: No confident solution found. Escalating to Level 2..."
-  PROCEED to Level 2 process
-</decision_gate>
-</critical_sequence>
 
 ---
 
 ## Level 2: Moderate Investigation (15-30 min, Sonnet, no extended thinking)
 
-Deep-dive Context7, JUCE forums, GitHub for authoritative answers.
+**Goal:** Deep-dive JUCE docs, forums, GitHub for authoritative answers
+
+**Sources:** Context7 deep-dive, JUCE forum search, GitHub issue search
+
+**Exit criteria:** MEDIUM-HIGH confidence solution → present decision menu, otherwise escalate to Level 3
 
 See `references/research-protocol.md#level-2-moderate-investigation` for detailed process.
-
-<success_criteria level="2">
-- Found authoritative answer verified by multiple sources
-- MEDIUM-HIGH confidence (60%+)
-- Solution adaptable with minor modifications
-</success_criteria>
-
-<critical_sequence name="level2_moderate_investigation" enforce_order="strict">
-<step number="1" required="true">Context7 deep-dive (module docs, examples, patterns)</step>
-<step number="2" required="true">JUCE forum search via WebSearch</step>
-<step number="3" required="true">GitHub issue search (juce-framework/JUCE)</step>
-<step number="4" required="true">Synthesize findings from multiple sources</step>
-<step number="5" required="true">Assess confidence (HIGH/MEDIUM/LOW)</step>
-
-<decision_gate name="level2_outcome" enforce="strict">
-IF confidence IN [HIGH, MEDIUM]:
-  THEN present decision menu with solution options
-  OPTIONS: Apply solution | Review findings | Escalate to Level 3 | Other
-  WAIT for user selection
-
-ELSE IF confidence = LOW:
-  THEN auto-escalate to Level 3
-  OUTPUT notification: "Level 2: Low confidence. Escalating to Level 3 (deep research)..."
-  PROCEED to Level 3 process
-
-ELSE IF problem_type = "novel_implementation":
-  THEN auto-escalate to Level 3
-  OUTPUT notification: "Level 2: Novel problem requires parallel investigation. Escalating to Level 3..."
-  PROCEED to Level 3 process
-</decision_gate>
-</critical_sequence>
 
 ---
 
 ## Level 3: Deep Research (30-60 min, Opus, extended thinking 15k budget)
 
-**Goal:** Comprehensive investigation with parallel subagent research for novel/complex problems
+**Goal:** Parallel subagent investigation for novel/complex problems
 
-<delegation_rule level="3" name="level3_requirements" enforce="strict">
-<model_switch>
-MUST switch to: claude-opus-4-1-20250805
-MUST enable: extended-thinking with 15,000 token budget
-MUST set timeout: 3600 seconds (60 min)
-NEVER use: Sonnet at Level 3 (insufficient capacity for synthesis)
-</model_switch>
+**Model requirements:** claude-opus-4-1-20250805 with extended-thinking (15k budget)
 
-<subagent_requirement>
-MUST spawn 2-3 parallel research subagents via Task tool.
-- Spawn 2 subagents for focused problems with clear scope
-- Spawn 3 subagents for complex multi-faceted problems requiring diverse approaches
+**Process:** Spawn 2-3 parallel research subagents via Task tool, synthesize findings
 
-MUST invoke ALL subagents in PARALLEL (single response with multiple Task calls).
-NEVER invoke subagents sequentially (defeats 60-min → 20-min optimization).
-
-Each subagent runs in fresh context with focused research goal.
-</subagent_requirement>
-
-<timing_expectation>
-3 parallel subagents × 20 min each = 20 min total wall time
-NOT 60 min serial time
-Note: Assumes Task tool parallel execution capability
-</timing_expectation>
-</delegation_rule>
-
-Parallel subagent investigation for novel/complex problems.
+**Exit criteria:** ALWAYS present decision menu (no further escalation)
 
 See `references/research-protocol.md#level-3-deep-research` for detailed process.
-
-<success_criteria level="3">
-- Comprehensive investigation from multiple angles
-- Novel insights or authoritative precedent found
-- HIGH confidence after synthesis
-</success_criteria>
-
-<critical_sequence name="level3_deep_research" enforce_order="strict">
-<step number="1" required="true">Spawn 2-3 parallel research subagents via Task tool (identify research approaches first)</step>
-<step number="2" required="true">Each subagent investigates focused aspect (different sources, approaches, or angles)</step>
-<step number="3" required="true">Wait for all subagents to complete</step>
-<step number="4" required="true">Synthesize findings using extended thinking (15k budget)</step>
-<step number="5" required="true">Generate comprehensive report using assets/level3-report-template.md</step>
-<step number="6" required="true">Present decision menu with recommendations</step>
-
-<decision_gate name="level3_outcome" enforce="strict">
-ALWAYS present decision menu (no further escalation possible)
-OPTIONS: Apply solution | Review findings | Try alternative | Document findings | Other
-WAIT for user selection
-</decision_gate>
-</critical_sequence>
 
 ---
 

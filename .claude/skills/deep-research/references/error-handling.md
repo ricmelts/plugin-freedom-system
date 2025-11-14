@@ -23,7 +23,7 @@ Returning best findings based on investigation so far:
 
 What's next?
 1. Use current findings - Proceed with partial answer
-2. Retry with extended timeout - Continue research (80 min)
+2. Retry with extended timeout - Continue research
 3. Other
 ```
 

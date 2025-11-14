@@ -80,19 +80,35 @@ See SKILL.md for detailed Level 1 process (lines 177-192).
 
 2. **Parallel subagent investigation**
 
-   Spawn 2-3 research subagents via Task tool:
+   Spawn 2-3 research subagents via Task tool with explicit model override:
 
-   ```typescript
-   // Example: Researching wavetable anti-aliasing
+   **Task tool syntax:**
+   ```
+   Task tool with:
+   - model: "claude-opus-4-1-20250805"
+   - extended_thinking: 15000
+   - task: "[Focused research goal for this subagent]"
+   ```
 
-   Subagent 1: "Investigate BLEP (Band-Limited Step) anti-aliasing approach"
-   → Returns: Implementation complexity, CPU cost, quality assessment
+   **Example: Researching wavetable anti-aliasing**
 
-   Subagent 2: "Investigate oversampling + filtering approach"
-   → Returns: Implementation complexity, CPU cost, quality assessment
+   Spawn 3 parallel Task tool calls in a single response:
 
-   Subagent 3: "Research commercial wavetable synth implementations"
-   → Returns: Industry standards, common approaches
+   ```
+   Task 1:
+   - model: "claude-opus-4-1-20250805"
+   - extended_thinking: 15000
+   - task: "Investigate BLEP (Band-Limited Step) anti-aliasing approach. Research implementation complexity, CPU cost, quality assessment, and JUCE integration."
+
+   Task 2:
+   - model: "claude-opus-4-1-20250805"
+   - extended_thinking: 15000
+   - task: "Investigate oversampling + filtering approach for wavetable anti-aliasing. Research implementation complexity, CPU cost, quality assessment, and juce::dsp::Oversampling API."
+
+   Task 3:
+   - model: "claude-opus-4-1-20250805"
+   - extended_thinking: 15000
+   - task: "Research commercial wavetable synth implementations. Identify industry standards, common approaches, and best practices for anti-aliasing."
    ```
 
    Each subagent runs in fresh context with focused research goal.
@@ -132,7 +148,7 @@ See SKILL.md for detailed Level 1 process (lines 177-192).
 
 - Complex DSP algorithm question
 - Novel feature requiring original implementation
-- No clear answer after moderate investigation (15 min)
+- No clear answer after moderate investigation
 - Multiple conflicting solutions found (need synthesis)
 
 ---

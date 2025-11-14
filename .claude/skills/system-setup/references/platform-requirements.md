@@ -52,7 +52,7 @@ xcode-select -p
 xcode-select --install
 ```
 
-This opens a GUI dialog. Click "Install" and follow the prompts. Installation takes 5-10 minutes.
+This opens a GUI dialog. Click "Install" and follow the prompts.
 
 **Verify:**
 ```bash
