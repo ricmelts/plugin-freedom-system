@@ -2,7 +2,7 @@
 
 ## Status
 - **Current Status:** 📦 Installed
-- **Version:** 1.1.0
+- **Version:** 1.1.1
 - **Type:** Audio Effect
 
 ## Lifecycle Timeline
@@ -20,6 +20,7 @@
 - **2025-11-11 (v1.0.2):** Fixed WebView parameter initialization (valueChangedEvent undefined callback parameters)
 - **2025-11-12 (v1.0.3):** Fixed knob hover shake - replaced scale transform with border color change
 - **2025-11-13 (v1.1.0):** Added INPUT and OUTPUT trim knobs for gain staging
+- **2025-11-15 (v1.1.1):** Fixed trim knob positioning and styling - improved spacing, label placement, and brass aesthetic consistency
 
 ## Known Issues
 

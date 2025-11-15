@@ -26,7 +26,7 @@
 | Plugin Name | Status | Version | Type | Last Updated |
 |-------------|--------|---------|------|--------------|
 | GainKnob | 📦 Installed | 1.2.3 | Audio Effect (Utility) | 2025-11-10 |
-| TapeAge | 📦 Installed | 1.1.0 | Audio Effect | 2025-11-13 |
+| TapeAge | 📦 Installed | 1.1.1 | Audio Effect | 2025-11-15 |
 | ClapMachine | 💡 Ideated | - | - | 2025-11-10 |
 | DriveVerb | 📦 Installed | 1.0.2 | Audio Effect (Reverb) | 2025-11-12 |
 | FlutterVerb | 📦 Installed | 1.0.3 | Audio Effect (Reverb) | 2025-11-12 |
