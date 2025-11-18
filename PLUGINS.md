@@ -40,6 +40,7 @@
 | LushPad | 📦 Installed | 1.0.0 | Synth (Instrument) | 2025-11-13 |
 | Words | 💡 Ideated | - | Utility (MIDI Sequencer) | 2025-11-13 |
 | PadForge | 💡 Ideated | - | Synth (Instrument) | 2025-11-14 |
+| AngelGrain | 🚧 Stage 0 | - | Audio Effect (Granular Delay) | 2025-11-18 |
 
 **For detailed plugin information (lifecycle timeline, known issues, parameters, etc.), see:**
 `plugins/[PluginName]/NOTES.md`
