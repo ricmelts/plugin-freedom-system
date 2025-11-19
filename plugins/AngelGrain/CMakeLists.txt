@@ -1,9 +1,4 @@
 cmake_minimum_required(VERSION 3.15)
-project(AngelGrain VERSION 1.0.0)
-
-# Include JUCE
-set(JUCE_PATH "/Applications/JUCE")
-add_subdirectory(${JUCE_PATH} ${CMAKE_CURRENT_BINARY_DIR}/JUCE)
 
 # Plugin formats: VST3, AU, Standalone
 juce_add_plugin(AngelGrain
