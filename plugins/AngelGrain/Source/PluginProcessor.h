@@ -79,8 +79,9 @@ private:
     juce::AudioBuffer<float> wetBuffer;
     juce::AudioBuffer<float> dryBuffer;
 
-    // Feedback buffer for feedback loop
-    float feedbackSample = 0.0f;
+    // Feedback buffer for feedback loop (stereo)
+    float feedbackSampleL = 0.0f;
+    float feedbackSampleR = 0.0f;
 
     // Helper methods
     void spawnGrain();

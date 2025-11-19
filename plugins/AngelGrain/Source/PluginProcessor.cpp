@@ -71,7 +71,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AngelGrainAudioProcessor::cr
 
 AngelGrainAudioProcessor::AngelGrainAudioProcessor()
     : AudioProcessor(BusesProperties()
-                        .withInput("Input", juce::AudioChannelSet::mono(), true)
+                        .withInput("Input", juce::AudioChannelSet::stereo(), true)
                         .withOutput("Output", juce::AudioChannelSet::stereo(), true))
     , parameters(*this, nullptr, "Parameters", createParameterLayout())
 {
@@ -85,20 +85,15 @@ void AngelGrainAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBl
 {
     currentSampleRate = sampleRate;
 
-    // Setup DSP spec for stereo output
+    // Setup DSP spec for stereo
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
-    spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
+    spec.numChannels = 2;  // Stereo input/output
 
-    // Prepare grain buffer with mono spec (mono input)
-    juce::dsp::ProcessSpec monoSpec;
-    monoSpec.sampleRate = sampleRate;
-    monoSpec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
-    monoSpec.numChannels = 1;
-
+    // Prepare grain buffer with stereo spec (preserves stereo field)
     int maxDelaySamples = static_cast<int>(sampleRate * maxDelaySeconds);
     grainBuffer.setMaximumDelayInSamples(maxDelaySamples);
-    grainBuffer.prepare(monoSpec);
+    grainBuffer.prepare(spec);
     grainBuffer.reset();
 
     // Note: Using manual linear dry/wet mixing instead of DryWetMixer
@@ -126,7 +121,8 @@ void AngelGrainAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBl
     // Reset scheduler
     samplesSinceLastGrain = 0;
     writePosition = 0;
-    feedbackSample = 0.0f;
+    feedbackSampleL = 0.0f;
+    feedbackSampleR = 0.0f;
 
     // Calculate initial grain interval from delayTime parameter
     auto* delayTimeParam = parameters.getRawParameterValue("delayTime");
@@ -205,27 +201,30 @@ void AngelGrainAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
     // Calculate Tukey window alpha for character control (0.1 to 1.0)
     float tukeyAlpha = 0.1f + (characterAmount * 0.9f);
 
-    // Get mono input pointer
-    const float* monoInput = buffer.getReadPointer(0);
+    // Get stereo input pointers
+    const float* inputL = buffer.getReadPointer(0);
+    const float* inputR = buffer.getNumChannels() > 1 ? buffer.getReadPointer(1) : buffer.getReadPointer(0);
 
     // Clear wet buffer
     wetBuffer.clear();
 
-    // Store dry signal for later mixing (duplicate mono to stereo)
+    // Store dry signal for later mixing (preserve stereo field)
     for (int i = 0; i < numSamples; ++i)
     {
-        dryBuffer.setSample(0, i, monoInput[i]);
-        dryBuffer.setSample(1, i, monoInput[i]);
+        dryBuffer.setSample(0, i, inputL[i]);
+        dryBuffer.setSample(1, i, inputR[i]);
     }
 
     // Process sample by sample
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        // Mix feedback with input before writing to grain buffer
-        float inputWithFeedback = monoInput[sample] + feedbackSample;
+        // Mix feedback with input before writing to grain buffer (stereo)
+        float inputWithFeedbackL = inputL[sample] + feedbackSampleL;
+        float inputWithFeedbackR = inputR[sample] + feedbackSampleR;
 
-        // Write to grain buffer (mono input + feedback)
-        grainBuffer.pushSample(0, inputWithFeedback);
+        // Write to grain buffer (stereo input + feedback)
+        grainBuffer.pushSample(0, inputWithFeedbackL);
+        grainBuffer.pushSample(1, inputWithFeedbackR);
 
         // Calculate grain interval with chaos timing jitter
         int currentInterval = nextGrainInterval;
@@ -253,20 +252,25 @@ void AngelGrainAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
             if (!voice.active)
                 continue;
 
-            // Read from delay buffer with interpolation
+            // Read from delay buffer with interpolation (stereo)
             float delaySamples = std::max(0.0f, voice.readPosition);
-            float grainSample = grainBuffer.popSample(0, delaySamples, false);
+            float grainSampleL = grainBuffer.popSample(0, delaySamples, false);
+            float grainSampleR = grainBuffer.popSample(1, delaySamples, false);
 
             // Apply window envelope with Tukey alpha (character control)
             float windowGain = getWindowSample(voice.windowPosition, tukeyAlpha);
-            float processedSample = grainSample * windowGain;
+            float processedL = grainSampleL * windowGain;
+            float processedR = grainSampleR * windowGain;
 
-            // Apply equal-power pan
+            // Apply equal-power pan crossfade between stereo channels
+            // Pan 0.0 = full left channel, 0.5 = balanced, 1.0 = full right channel
             float leftGain = std::cos(voice.pan * juce::MathConstants<float>::halfPi);
             float rightGain = std::sin(voice.pan * juce::MathConstants<float>::halfPi);
 
-            leftOutput += processedSample * leftGain;
-            rightOutput += processedSample * rightGain;
+            // Crossfade: at pan=0.5, both channels contribute equally
+            // This preserves stereo field while allowing pan randomization
+            leftOutput += (processedL * leftGain + processedR * (1.0f - rightGain)) * 0.707f;
+            rightOutput += (processedR * rightGain + processedL * (1.0f - leftGain)) * 0.707f;
 
             // Advance grain playback (decrease delay to read more recent audio)
             voice.readPosition -= voice.playbackRate;
@@ -282,16 +286,18 @@ void AngelGrainAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
             }
         }
 
-        // Apply feedback gain and soft saturation
-        float stereoSum = (leftOutput + rightOutput) * 0.5f;
-        float feedbackSignal = stereoSum * feedbackGain;
+        // Apply feedback gain and soft saturation (stereo)
+        float feedbackL = leftOutput * feedbackGain;
+        float feedbackR = rightOutput * feedbackGain;
 
         // Apply soft saturation (tanh) at high feedback to prevent runaway
         if (feedbackGain > 0.5f)
         {
-            feedbackSignal = std::tanh(feedbackSignal);
+            feedbackL = std::tanh(feedbackL);
+            feedbackR = std::tanh(feedbackR);
         }
-        feedbackSample = feedbackSignal;
+        feedbackSampleL = feedbackL;
+        feedbackSampleR = feedbackR;
 
         // Write to wet buffer
         wetBuffer.setSample(0, sample, leftOutput);
