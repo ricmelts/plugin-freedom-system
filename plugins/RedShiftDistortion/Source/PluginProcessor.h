@@ -42,9 +42,18 @@ private:
     // Delay path components
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delayLine;
 
+    // Delay time modulator (LFO for doppler simulation)
+    float lfoPhase { 0.0f };
+    float currentDelayTimeMs { 250.0f };  // Smoothed delay time (prevent clicks)
+    float targetDelayTimeMs { 250.0f };   // Target delay time (from parameter or tempo sync)
+
     // Parallel path buffers (pre-allocated in prepareToPlay)
     juce::AudioBuffer<float> delayPathBuffer;
     juce::AudioBuffer<float> distortionPathBuffer;
+
+    // Helper methods
+    float quantizeDelayTimeToTempo(float hostBpm, float delayTimeMs);
+    float getHostBpm();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RedShiftDistortionAudioProcessor)
 };

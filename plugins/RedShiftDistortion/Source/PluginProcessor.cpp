@@ -109,6 +109,13 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     // Clear buffers
     delayPathBuffer.clear();
     distortionPathBuffer.clear();
+
+    // Reset LFO phase
+    lfoPhase = 0.0f;
+
+    // Initialize delay time smoothing
+    currentDelayTimeMs = 250.0f;
+    targetDelayTimeMs = 250.0f;
 }
 
 void RedShiftDistortionAudioProcessor::releaseResources()
@@ -116,6 +123,61 @@ void RedShiftDistortionAudioProcessor::releaseResources()
     // Release large buffers to save memory when plugin not in use
     delayPathBuffer.setSize(0, 0);
     distortionPathBuffer.setSize(0, 0);
+}
+
+float RedShiftDistortionAudioProcessor::getHostBpm()
+{
+    // Query host BPM via AudioPlayHead (real-time safe)
+    if (auto* playHead = getPlayHead())
+    {
+        if (auto positionInfo = playHead->getPosition())
+        {
+            if (auto bpm = positionInfo->getBpm())
+            {
+                // Clamp BPM to valid range (20-300 BPM)
+                return juce::jlimit(20.0, 300.0, *bpm);
+            }
+        }
+    }
+
+    // Fallback to 120 BPM if host doesn't provide tempo
+    return 120.0;
+}
+
+float RedShiftDistortionAudioProcessor::quantizeDelayTimeToTempo(float hostBpm, float delayTimeMs)
+{
+    // Note divisions in beats (4/4 time signature)
+    const float divisions[] = {
+        0.25f,  // 1/16 note
+        0.5f,   // 1/8 note
+        1.0f,   // 1/4 note
+        2.0f,   // 1/2 note
+        4.0f,   // 1 bar
+        8.0f,   // 2 bars
+        16.0f,  // 4 bars
+        32.0f   // 8 bars
+    };
+
+    // Convert current delayTimeMs to beats
+    const float beatsFromMs = (delayTimeMs * hostBpm) / 60000.0f;
+
+    // Find nearest note division
+    float nearestDivision = divisions[0];
+    float minDistance = std::abs(beatsFromMs - nearestDivision);
+
+    for (float division : divisions)
+    {
+        float distance = std::abs(beatsFromMs - division);
+        if (distance < minDistance)
+        {
+            minDistance = distance;
+            nearestDivision = division;
+        }
+    }
+
+    // Convert nearest division back to milliseconds
+    // Formula: ms = (60000 / bpm) * beats
+    return (60000.0f / hostBpm) * nearestDivision;
 }
 
 void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -129,13 +191,17 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 
     // Read parameters (atomic, real-time safe)
     auto* saturationParam = parameters.getRawParameterValue("saturation");
+    auto* dopplerShiftParam = parameters.getRawParameterValue("dopplerShift");
     auto* delayTimeParam = parameters.getRawParameterValue("delayTime");
+    auto* tempoSyncParam = parameters.getRawParameterValue("tempoSync");
     auto* delayLevelParam = parameters.getRawParameterValue("delayLevel");
     auto* distortionLevelParam = parameters.getRawParameterValue("distortionLevel");
     auto* masterOutputParam = parameters.getRawParameterValue("masterOutput");
 
     float saturationDb = saturationParam->load();
+    float dopplerShift = dopplerShiftParam->load();
     float delayTimeMs = delayTimeParam->load();
+    bool tempoSync = tempoSyncParam->load() > 0.5f;
     float delayLevelDb = delayLevelParam->load();
     float distortionLevelDb = distortionLevelParam->load();
     float masterOutputDb = masterOutputParam->load();
@@ -145,6 +211,24 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     float delayLevelGain = std::pow(10.0f, delayLevelDb / 20.0f);
     float distortionLevelGain = std::pow(10.0f, distortionLevelDb / 20.0f);
     float masterOutputGain = std::pow(10.0f, masterOutputDb / 20.0f);
+
+    // TEMPO SYNC: Calculate target delay time
+    if (tempoSync)
+    {
+        // Get host BPM and quantize delay time to nearest note division
+        float hostBpm = getHostBpm();
+        targetDelayTimeMs = quantizeDelayTimeToTempo(hostBpm, delayTimeMs);
+    }
+    else
+    {
+        // Free time mode: use parameter value directly
+        targetDelayTimeMs = delayTimeMs;
+    }
+
+    // SMOOTH DELAY TIME TRANSITIONS: Prevent clicks when switching modes or tempo changes
+    // Exponential smoothing: fast enough to track tempo changes, slow enough to avoid clicks
+    const float smoothingFactor = 0.05f;  // 5% per buffer (~10ms smoothing at 512 samples @ 48kHz)
+    currentDelayTimeMs += (targetDelayTimeMs - currentDelayTimeMs) * smoothingFactor;
 
     const int numSamples = buffer.getNumSamples();
     const int numChannels = buffer.getNumChannels();
@@ -165,9 +249,33 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 
     // DELAY PATH PROCESSING
     {
+        // DELAY TIME MODULATOR: LFO-driven delay time variation (doppler simulation)
+        // LFO frequency scales with doppler shift magnitude (0.5Hz to 2.0Hz)
+        const float lfoFreq = 0.5f + (std::abs(dopplerShift) / 100.0f) * 1.5f;  // 0.5-2.0Hz range
+
+        // Modulation depth scales with doppler shift magnitude (0-10% delay variation)
+        const float modDepth = (std::abs(dopplerShift) / 100.0f) * 0.1f;  // 0-10% depth
+
+        // Calculate LFO phase increment per sample
+        const float phaseInc = (lfoFreq * juce::MathConstants<float>::twoPi) / static_cast<float>(spec.sampleRate);
+
+        // LFO output: sine wave (-1.0 to +1.0)
+        const float lfoOut = std::sin(lfoPhase);
+
+        // Modulated delay time: base delay * (1.0 + lfo * depth)
+        // Example: 250ms base, 10% depth, lfo=+1.0 → 250ms * 1.1 = 275ms
+        const float modulatedDelayTimeMs = currentDelayTimeMs * (1.0f + lfoOut * modDepth);
+
         // Convert delay time from ms to samples
-        const float delaySamples = (delayTimeMs / 1000.0f) * static_cast<float>(spec.sampleRate);
+        const float delaySamples = (modulatedDelayTimeMs / 1000.0f) * static_cast<float>(spec.sampleRate);
         delayLine.setDelay(delaySamples);
+
+        // Advance LFO phase
+        lfoPhase += phaseInc * static_cast<float>(numSamples);
+
+        // Wrap phase to prevent overflow (explicit wrapping at 2π)
+        if (lfoPhase >= juce::MathConstants<float>::twoPi)
+            lfoPhase -= juce::MathConstants<float>::twoPi;
 
         // Process delay line
         juce::dsp::AudioBlock<float> delayBlock(delayPathBuffer);
