@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedShiftDistortion</title>
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- JUCE WebView Bridge -->
+    <script type="module" src="js/juce/index.js"></script>
+</head>
+<body>
+    <div class="plugin-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>RedShiftDistortion</h1>
+            <p class="subtitle">Parallel Delay & Tube Distortion with Doppler Effects</p>
+        </div>
+
+        <!-- Main Controls Section -->
+        <div class="controls-section">
+            <!-- Saturation Control -->
+            <div class="control-group">
+                <label for="saturation">Saturation</label>
+                <div class="knob" id="saturation" data-param="saturation">
+                    <div class="knob-track"></div>
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="value-display" id="saturation-value">0.0 dB</div>
+            </div>
+
+            <!-- Doppler Shift Control -->
+            <div class="control-group">
+                <label for="dopplerShift">Doppler Shift</label>
+                <div class="knob" id="dopplerShift" data-param="dopplerShift">
+                    <div class="knob-track"></div>
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="value-display" id="dopplerShift-value">0.0 %</div>
+            </div>
+
+            <!-- Delay Time Control -->
+            <div class="control-group">
+                <label for="delayTime">Delay Time</label>
+                <div class="knob" id="delayTime" data-param="delayTime">
+                    <div class="knob-track"></div>
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="value-display" id="delayTime-value">250.0 ms</div>
+            </div>
+        </div>
+
+        <!-- Mixer Section -->
+        <div class="mixer-section">
+            <h2>Parallel Mix</h2>
+
+            <!-- Delay Level -->
+            <div class="control-group">
+                <label for="delayLevel">Delay Level</label>
+                <div class="knob" id="delayLevel" data-param="delayLevel">
+                    <div class="knob-track"></div>
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="value-display" id="delayLevel-value">-6.0 dB</div>
+            </div>
+
+            <!-- Distortion Level -->
+            <div class="control-group">
+                <label for="distortionLevel">Distortion Level</label>
+                <div class="knob" id="distortionLevel" data-param="distortionLevel">
+                    <div class="knob-track"></div>
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="value-display" id="distortionLevel-value">-6.0 dB</div>
+            </div>
+
+            <!-- Master Output -->
+            <div class="control-group">
+                <label for="masterOutput">Master Output</label>
+                <div class="knob" id="masterOutput" data-param="masterOutput">
+                    <div class="knob-track"></div>
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="value-display" id="masterOutput-value">0.0 dB</div>
+            </div>
+        </div>
+
+        <!-- Toggle Switches -->
+        <div class="toggles-section">
+            <!-- Pitch Enable -->
+            <div class="toggle-group">
+                <label for="pitchEnable">Pitch Enable</label>
+                <div class="toggle-switch" id="pitchEnable" data-param="pitchEnable">
+                    <div class="toggle-track"></div>
+                    <div class="toggle-thumb"></div>
+                </div>
+            </div>
+
+            <!-- Tempo Sync -->
+            <div class="toggle-group">
+                <label for="tempoSync">Tempo Sync</label>
+                <div class="toggle-switch" id="tempoSync" data-param="tempoSync">
+                    <div class="toggle-track"></div>
+                    <div class="toggle-thumb"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application Script -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

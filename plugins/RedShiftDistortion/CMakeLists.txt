@@ -7,6 +7,7 @@ juce_add_plugin(RedShiftDistortion
     PLUGIN_CODE RsDi
     FORMATS VST3 AU Standalone
     PRODUCT_NAME "RedShiftDistortion"
+    NEEDS_WEB_BROWSER TRUE  # REQUIRED for VST3 WebView support
 )
 
 # Source files
@@ -47,27 +48,25 @@ target_link_libraries(RedShiftDistortion
 # Generate JuceHeader.h (JUCE 8 requirement)
 juce_generate_juce_header(RedShiftDistortion)
 
-# WebView UI Resources (uncommented by gui-agent if WebView UI used)
-# juce_add_binary_data(RedShiftDistortion_UIResources
-#     SOURCES
-#         Source/ui/public/index.html
-#         Source/ui/public/js/juce/index.js
-# )
-#
-# target_link_libraries(RedShiftDistortion
-#     PRIVATE
-#         RedShiftDistortion_UIResources
-# )
+# WebView UI Resources
+juce_add_binary_data(RedShiftDistortion_UIResources
+    SOURCES
+        Source/ui/public/index.html
+        Source/ui/public/css/styles.css
+        Source/ui/public/js/juce/index.js
+        Source/ui/public/js/juce/check_native_interop.js
+        Source/ui/public/js/app.js
+)
+
+target_link_libraries(RedShiftDistortion
+    PRIVATE
+        RedShiftDistortion_UIResources
+)
 
 # Compile definitions
 target_compile_definitions(RedShiftDistortion
     PUBLIC
         JUCE_VST3_CAN_REPLACE_VST2=0
+        JUCE_WEB_BROWSER=1  # Enable WebView
+        JUCE_USE_CURL=0     # Disable CURL (not needed for local HTML)
 )
-
-# WebView support (uncommented by gui-agent if WebView UI used)
-# target_compile_definitions(RedShiftDistortion
-#     PUBLIC
-#         JUCE_WEB_BROWSER=1
-#         JUCE_USE_CURL=0
-# )
