@@ -217,6 +217,21 @@ h2 {
     background: linear-gradient(145deg, #ff6b6b, #ff4444);
 }
 
+/* Bypass Section */
+.bypass-section {
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+.bypass-toggles-row {
+    display: flex;
+    justify-content: space-around;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
 /* Responsive Adjustments */
 @media (max-height: 450px) {
     .knob {
