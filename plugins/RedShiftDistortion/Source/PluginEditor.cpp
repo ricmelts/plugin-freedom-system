@@ -7,12 +7,14 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     // 1. Create relays FIRST (initialize with parameter IDs matching APVTS)
     saturationRelay = std::make_unique<juce::WebSliderRelay>("saturation");
     dopplerShiftRelay = std::make_unique<juce::WebSliderRelay>("dopplerShift");
-    pitchEnableRelay = std::make_unique<juce::WebToggleButtonRelay>("pitchEnable");
     delayTimeRelay = std::make_unique<juce::WebSliderRelay>("delayTime");
     tempoSyncRelay = std::make_unique<juce::WebToggleButtonRelay>("tempoSync");
     feedbackRelay = std::make_unique<juce::WebSliderRelay>("feedback");
     distortionLevelRelay = std::make_unique<juce::WebSliderRelay>("distortionLevel");
     masterOutputRelay = std::make_unique<juce::WebSliderRelay>("masterOutput");
+    bypassSaturationRelay = std::make_unique<juce::WebToggleButtonRelay>("bypassSaturation");
+    bypassDelayRelay = std::make_unique<juce::WebToggleButtonRelay>("bypassDelay");
+    bypassDopplerRelay = std::make_unique<juce::WebToggleButtonRelay>("bypassDoppler");
 
     // 2. Create WebView with relay options
     webView = std::make_unique<juce::WebBrowserComponent>(
@@ -21,12 +23,14 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
             .withResourceProvider([this](const auto& url) { return getResource(url); })
             .withOptionsFrom(*saturationRelay)
             .withOptionsFrom(*dopplerShiftRelay)
-            .withOptionsFrom(*pitchEnableRelay)
             .withOptionsFrom(*delayTimeRelay)
             .withOptionsFrom(*tempoSyncRelay)
             .withOptionsFrom(*feedbackRelay)
             .withOptionsFrom(*distortionLevelRelay)
             .withOptionsFrom(*masterOutputRelay)
+            .withOptionsFrom(*bypassSaturationRelay)
+            .withOptionsFrom(*bypassDelayRelay)
+            .withOptionsFrom(*bypassDopplerRelay)
     );
 
     // 3. Create attachments LAST (connect parameters to relays)
@@ -35,9 +39,6 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
 
     dopplerShiftAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("dopplerShift"), *dopplerShiftRelay, nullptr);
-
-    pitchEnableAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
-        *processorRef.parameters.getParameter("pitchEnable"), *pitchEnableRelay, nullptr);
 
     delayTimeAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("delayTime"), *delayTimeRelay, nullptr);
@@ -53,6 +54,15 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
 
     masterOutputAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("masterOutput"), *masterOutputRelay, nullptr);
+
+    bypassSaturationAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("bypassSaturation"), *bypassSaturationRelay, nullptr);
+
+    bypassDelayAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("bypassDelay"), *bypassDelayRelay, nullptr);
+
+    bypassDopplerAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("bypassDoppler"), *bypassDopplerRelay, nullptr);
 
     // Add WebView to editor
     addAndMakeVisible(*webView);

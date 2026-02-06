@@ -45,10 +45,16 @@ const paramConfigs = {
         unit: 'dB',
         decimals: 1
     },
-    pitchEnable: {
+    tempoSync: {
         type: 'toggle'
     },
-    tempoSync: {
+    bypassSaturation: {
+        type: 'toggle'
+    },
+    bypassDelay: {
+        type: 'toggle'
+    },
+    bypassDoppler: {
         type: 'toggle'
     }
 };
