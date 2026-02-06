@@ -70,8 +70,8 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     // Navigate to UI
     webView->goToURL(juce::WebBrowserComponent::getResourceProviderRoot());
 
-    // Set editor size (600x400 from mockup/design)
-    setSize(600, 400);
+    // Set editor size (600x550 - increased to show bypass controls)
+    setSize(600, 550);
 }
 
 RedShiftDistortionAudioProcessorEditor::~RedShiftDistortionAudioProcessorEditor()
