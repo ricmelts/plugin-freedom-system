@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_dsp/juce_dsp.h>
 
 class RedShiftDistortionAudioProcessor : public juce::AudioProcessor
 {
@@ -34,6 +35,16 @@ public:
 private:
     // Parameter layout creation
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
+    // DSP Components (BEFORE parameters for initialization order)
+    juce::dsp::ProcessSpec spec;
+
+    // Delay path components
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delayLine;
+
+    // Parallel path buffers (pre-allocated in prepareToPlay)
+    juce::AudioBuffer<float> delayPathBuffer;
+    juce::AudioBuffer<float> distortionPathBuffer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RedShiftDistortionAudioProcessor)
 };

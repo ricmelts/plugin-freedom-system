@@ -90,13 +90,32 @@ RedShiftDistortionAudioProcessor::~RedShiftDistortionAudioProcessor()
 
 void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // Initialization will be added in Stage 2 (DSP)
-    juce::ignoreUnused(sampleRate, samplesPerBlock);
+    // Prepare DSP spec
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+    spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
+
+    // Prepare delay line (maximum 20 seconds at 192kHz = 3,840,000 samples)
+    const int maxDelaySamples = static_cast<int>(sampleRate * 20.0);
+    delayLine.setMaximumDelayInSamples(maxDelaySamples);
+    delayLine.prepare(spec);
+    delayLine.reset();
+
+    // Pre-allocate parallel path buffers (real-time safety)
+    const int numChannels = getTotalNumOutputChannels();
+    delayPathBuffer.setSize(numChannels, samplesPerBlock);
+    distortionPathBuffer.setSize(numChannels, samplesPerBlock);
+
+    // Clear buffers
+    delayPathBuffer.clear();
+    distortionPathBuffer.clear();
 }
 
 void RedShiftDistortionAudioProcessor::releaseResources()
 {
-    // Cleanup will be added in Stage 2 (DSP)
+    // Release large buffers to save memory when plugin not in use
+    delayPathBuffer.setSize(0, 0);
+    distortionPathBuffer.setSize(0, 0);
 }
 
 void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -104,12 +123,100 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     juce::ScopedNoDenormals noDenormals;
     juce::ignoreUnused(midiMessages);
 
-    // Parameter access example (for Stage 2 DSP implementation):
-    // auto* saturationParam = parameters.getRawParameterValue("saturation");
-    // float saturationValue = saturationParam->load();  // Atomic read (real-time safe)
+    // Clear unused channels
+    for (int i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+        buffer.clear(i, 0, buffer.getNumSamples());
 
-    // Pass-through for Stage 1 (DSP implementation happens in Stage 2)
-    // Audio routing is already handled by JUCE
+    // Read parameters (atomic, real-time safe)
+    auto* saturationParam = parameters.getRawParameterValue("saturation");
+    auto* delayTimeParam = parameters.getRawParameterValue("delayTime");
+    auto* delayLevelParam = parameters.getRawParameterValue("delayLevel");
+    auto* distortionLevelParam = parameters.getRawParameterValue("distortionLevel");
+    auto* masterOutputParam = parameters.getRawParameterValue("masterOutput");
+
+    float saturationDb = saturationParam->load();
+    float delayTimeMs = delayTimeParam->load();
+    float delayLevelDb = delayLevelParam->load();
+    float distortionLevelDb = distortionLevelParam->load();
+    float masterOutputDb = masterOutputParam->load();
+
+    // Convert dB to linear gain
+    float saturationGain = std::pow(10.0f, saturationDb / 20.0f);
+    float delayLevelGain = std::pow(10.0f, delayLevelDb / 20.0f);
+    float distortionLevelGain = std::pow(10.0f, distortionLevelDb / 20.0f);
+    float masterOutputGain = std::pow(10.0f, masterOutputDb / 20.0f);
+
+    const int numSamples = buffer.getNumSamples();
+    const int numChannels = buffer.getNumChannels();
+
+    // Ensure parallel path buffers are sized correctly
+    if (delayPathBuffer.getNumSamples() < numSamples)
+    {
+        delayPathBuffer.setSize(numChannels, numSamples, false, false, true);
+        distortionPathBuffer.setSize(numChannels, numSamples, false, false, true);
+    }
+
+    // PARALLEL ROUTING: Duplicate input to both paths
+    for (int channel = 0; channel < numChannels; ++channel)
+    {
+        delayPathBuffer.copyFrom(channel, 0, buffer, channel, 0, numSamples);
+        distortionPathBuffer.copyFrom(channel, 0, buffer, channel, 0, numSamples);
+    }
+
+    // DELAY PATH PROCESSING
+    {
+        // Convert delay time from ms to samples
+        const float delaySamples = (delayTimeMs / 1000.0f) * static_cast<float>(spec.sampleRate);
+        delayLine.setDelay(delaySamples);
+
+        // Process delay line
+        juce::dsp::AudioBlock<float> delayBlock(delayPathBuffer);
+        juce::dsp::ProcessContextReplacing<float> delayContext(delayBlock);
+        delayLine.process(delayContext);
+
+        // Apply delay level gain
+        for (int channel = 0; channel < numChannels; ++channel)
+        {
+            auto* delayData = delayPathBuffer.getWritePointer(channel);
+            juce::FloatVectorOperations::multiply(delayData, delayLevelGain, numSamples);
+        }
+    }
+
+    // DISTORTION PATH PROCESSING
+    {
+        // Apply tube saturation (tanh waveshaping)
+        for (int channel = 0; channel < numChannels; ++channel)
+        {
+            auto* distData = distortionPathBuffer.getWritePointer(channel);
+
+            for (int sample = 0; sample < numSamples; ++sample)
+            {
+                // Tube saturation: output = tanh(gain * input)
+                distData[sample] = std::tanh(saturationGain * distData[sample]);
+            }
+        }
+
+        // Apply distortion level gain
+        for (int channel = 0; channel < numChannels; ++channel)
+        {
+            auto* distData = distortionPathBuffer.getWritePointer(channel);
+            juce::FloatVectorOperations::multiply(distData, distortionLevelGain, numSamples);
+        }
+    }
+
+    // OUTPUT MIXER: Sum both paths + apply master gain
+    for (int channel = 0; channel < numChannels; ++channel)
+    {
+        auto* outputData = buffer.getWritePointer(channel);
+        const auto* delayData = delayPathBuffer.getReadPointer(channel);
+        const auto* distData = distortionPathBuffer.getReadPointer(channel);
+
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            // Parallel mix: sum both paths
+            outputData[sample] = (delayData[sample] + distData[sample]) * masterOutputGain;
+        }
+    }
 }
 
 juce::AudioProcessorEditor* RedShiftDistortionAudioProcessor::createEditor()
