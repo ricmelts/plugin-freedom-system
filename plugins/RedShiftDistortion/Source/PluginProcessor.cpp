@@ -30,11 +30,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         true
     ));
 
-    // delayTime - Float (0.0 to 16000.0 ms)
+    // delayTime - Float (0.0 to 2500.0 ms)
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "delayTime", 1 },
         "Delay Time",
-        juce::NormalisableRange<float>(0.0f, 16000.0f, 1.0f),
+        juce::NormalisableRange<float>(0.0f, 2500.0f, 1.0f),
         250.0f,
         "ms"
     ));
@@ -46,13 +46,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         true
     ));
 
-    // delayLevel - Float (-60.0 to 0.0 dB)
+    // feedback - Float (0.0 to 95.0 %)
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "delayLevel", 1 },
-        "Delay Level",
-        juce::NormalisableRange<float>(-60.0f, 0.0f, 0.1f),
-        -6.0f,
-        "dB"
+        juce::ParameterID { "feedback", 1 },
+        "Feedback",
+        juce::NormalisableRange<float>(0.0f, 95.0f, 0.1f),
+        0.0f,
+        "%"
     ));
 
     // distortionLevel - Float (-60.0 to 0.0 dB)
@@ -106,11 +106,13 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     delayPathBuffer.setSize(numChannels, samplesPerBlock);
     distortionPathBuffer.setSize(numChannels, samplesPerBlock);
     grainOutputBuffer.setSize(numChannels, samplesPerBlock);
+    feedbackBuffer.setSize(numChannels, samplesPerBlock);
 
     // Clear buffers
     delayPathBuffer.clear();
     distortionPathBuffer.clear();
     grainOutputBuffer.clear();
+    feedbackBuffer.clear();
 
     // Reset LFO phase
     lfoPhase = 0.0f;
@@ -269,7 +271,7 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     auto* pitchEnableParam = parameters.getRawParameterValue("pitchEnable");
     auto* delayTimeParam = parameters.getRawParameterValue("delayTime");
     auto* tempoSyncParam = parameters.getRawParameterValue("tempoSync");
-    auto* delayLevelParam = parameters.getRawParameterValue("delayLevel");
+    auto* feedbackParam = parameters.getRawParameterValue("feedback");
     auto* distortionLevelParam = parameters.getRawParameterValue("distortionLevel");
     auto* masterOutputParam = parameters.getRawParameterValue("masterOutput");
 
@@ -278,13 +280,13 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     bool pitchEnable = pitchEnableParam->load() > 0.5f;
     float delayTimeMs = delayTimeParam->load();
     bool tempoSync = tempoSyncParam->load() > 0.5f;
-    float delayLevelDb = delayLevelParam->load();
+    float feedbackPercent = feedbackParam->load();
     float distortionLevelDb = distortionLevelParam->load();
     float masterOutputDb = masterOutputParam->load();
 
-    // Convert dB to linear gain
+    // Convert parameters to usable values
     float saturationGain = std::pow(10.0f, saturationDb / 20.0f);
-    float delayLevelGain = std::pow(10.0f, delayLevelDb / 20.0f);
+    float feedbackGain = feedbackPercent / 100.0f;  // 0-95% → 0.0-0.95
     float distortionLevelGain = std::pow(10.0f, distortionLevelDb / 20.0f);
     float masterOutputGain = std::pow(10.0f, masterOutputDb / 20.0f);
 
@@ -325,129 +327,129 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 
     // DELAY PATH PROCESSING
     {
-        // DELAY TIME MODULATOR: LFO-driven delay time variation (doppler simulation)
-        // LFO frequency scales with doppler shift magnitude (0.5Hz to 2.0Hz)
-        const float lfoFreq = 0.5f + (std::abs(dopplerShift) / 100.0f) * 1.5f;  // 0.5-2.0Hz range
+        // STEP 1: Add feedback from previous iteration
+        for (int channel = 0; channel < numChannels; ++channel)
+        {
+            auto* delayInput = delayPathBuffer.getWritePointer(channel);
+            const auto* feedbackData = feedbackBuffer.getReadPointer(channel);
 
-        // Modulation depth scales with doppler shift magnitude (0-10% delay variation)
-        const float modDepth = (std::abs(dopplerShift) / 100.0f) * 0.1f;  // 0-10% depth
+            for (int sample = 0; sample < numSamples; ++sample)
+            {
+                delayInput[sample] += feedbackData[sample] * feedbackGain;
+            }
+        }
 
-        // Calculate LFO phase increment per sample
-        const float phaseInc = (lfoFreq * juce::MathConstants<float>::twoPi) / static_cast<float>(spec.sampleRate);
+        // STEP 2: Calculate delay time (with optional modulation for doppler)
+        // Only modulate if doppler is non-zero
+        float finalDelayTimeMs = currentDelayTimeMs;
 
-        // LFO output: sine wave (-1.0 to +1.0)
-        const float lfoOut = std::sin(lfoPhase);
+        if (std::abs(dopplerShift) > 0.01f)  // Doppler enabled
+        {
+            // LFO frequency scales with doppler shift magnitude
+            const float lfoFreq = 0.5f + (std::abs(dopplerShift) / 100.0f) * 1.5f;
 
-        // Modulated delay time: base delay * (1.0 + lfo * depth)
-        // Example: 250ms base, 10% depth, lfo=+1.0 → 250ms * 1.1 = 275ms
-        const float modulatedDelayTimeMs = currentDelayTimeMs * (1.0f + lfoOut * modDepth);
+            // Modulation depth scales with doppler shift magnitude (0-10% delay variation)
+            const float modDepth = (std::abs(dopplerShift) / 100.0f) * 0.1f;
 
-        // Convert delay time from ms to samples
-        const float delaySamples = (modulatedDelayTimeMs / 1000.0f) * static_cast<float>(spec.sampleRate);
+            // Calculate LFO phase increment per sample
+            const float phaseInc = (lfoFreq * juce::MathConstants<float>::twoPi) / static_cast<float>(spec.sampleRate);
+
+            // LFO output: sine wave (-1.0 to +1.0)
+            const float lfoOut = std::sin(lfoPhase);
+
+            // Modulate delay time
+            finalDelayTimeMs = currentDelayTimeMs * (1.0f + lfoOut * modDepth);
+
+            // Advance LFO phase
+            lfoPhase += phaseInc * static_cast<float>(numSamples);
+            if (lfoPhase >= juce::MathConstants<float>::twoPi)
+                lfoPhase -= juce::MathConstants<float>::twoPi;
+        }
+
+        // STEP 3: Set delay time and process delay line
+        const float delaySamples = (finalDelayTimeMs / 1000.0f) * static_cast<float>(spec.sampleRate);
         delayLine.setDelay(delaySamples);
 
-        // Advance LFO phase
-        lfoPhase += phaseInc * static_cast<float>(numSamples);
-
-        // Wrap phase to prevent overflow (explicit wrapping at 2π)
-        if (lfoPhase >= juce::MathConstants<float>::twoPi)
-            lfoPhase -= juce::MathConstants<float>::twoPi;
-
-        // Process delay line
         juce::dsp::AudioBlock<float> delayBlock(delayPathBuffer);
         juce::dsp::ProcessContextReplacing<float> delayContext(delayBlock);
         delayLine.process(delayContext);
 
-        // GRANULAR PITCH SHIFTING: Apply pitch shift to delayed signal
-        // Calculate pitch shift rate from doppler shift parameter
-        // Note: Positive doppler (+50%) → pitch UP (red shift metaphor)
-        //       Negative doppler (-50%) → pitch DOWN (blue shift metaphor)
-        const float semitones = (dopplerShift / 100.0f) * 12.0f;  // ±50% → ±12 semitones
-        const float pitchShiftRate = std::pow(2.0f, semitones / 12.0f);  // Rate = 2^(semitones/12)
+        // STEP 4: Optional pitch shifting (only if doppler is significant AND pitchEnable is true)
+        // Doppler creates natural pitch artifacts from delay time modulation
+        // Additional pitch shifting is optional for extreme effects
+        bool applyPitchShift = pitchEnable && (std::abs(dopplerShift) > 10.0f);  // Only above 10%
 
-        // Time stretch factor (when pitchEnable is OFF, only time changes, not pitch)
-        const float timeStretchFactor = 1.0f + (dopplerShift / 100.0f);  // ±50% → 0.5x to 1.5x speed
-
-        // Clear grain output buffer
-        grainOutputBuffer.clear();
-
-        // Process sample-by-sample for granular synthesis
-        for (int sample = 0; sample < numSamples; ++sample)
+        if (applyPitchShift)
         {
-            // Write delayed signal to grain buffer (circular buffer)
-            for (int channel = 0; channel < numChannels; ++channel)
+            // Calculate pitch shift rate
+            const float semitones = (dopplerShift / 100.0f) * 12.0f;  // ±50% → ±12 semitones
+            const float pitchShiftRate = std::pow(2.0f, semitones / 12.0f);
+
+            // Clear grain output buffer
+            grainOutputBuffer.clear();
+
+            // Process granular pitch shifting
+            for (int sample = 0; sample < numSamples; ++sample)
             {
-                const auto* delayData = delayPathBuffer.getReadPointer(channel);
-                auto* grainBufData = grainBuffer.getWritePointer(channel);
-                grainBufData[grainBufferWritePos] = delayData[sample];
-            }
-
-            // Advance grain buffer write position
-            grainBufferWritePos = (grainBufferWritePos + 1) % grainBufferSize;
-
-            // Grain spawning logic (spawn new grain every grainAdvanceSamples)
-            samplesSinceLastGrainSpawn++;
-            if (samplesSinceLastGrainSpawn >= grainAdvanceSamples)
-            {
-                // Spawn new grain with current pitch shift rate
-                spawnGrain(pitchEnable ? pitchShiftRate : 1.0f);
-                samplesSinceLastGrainSpawn = 0;
-            }
-
-            // Process all active grains (overlap-add synthesis)
-            for (auto& grain : grains)
-            {
-                if (!grain.isActive)
-                    continue;
-
-                // Check if grain has finished playing
-                if (grain.grainPhase >= 1.0f)
-                {
-                    grain.isActive = false;
-                    continue;
-                }
-
-                // Calculate read position with pitch shift (variable-rate playback)
-                // For time stretching without pitch, use timeStretchFactor for grain advance rate
-                const float readRate = pitchEnable ? grain.playbackRate : 1.0f;
-                const int readPos = static_cast<int>(grain.readPosition) % grainBufferSize;
-
-                // Apply Hann window envelope
-                const float windowValue = getHannWindowValue(grain.grainPhase);
-
-                // Read and accumulate samples from grain buffer for all channels
+                // Write delayed signal to grain buffer
                 for (int channel = 0; channel < numChannels; ++channel)
                 {
-                    const auto* grainBufData = grainBuffer.getReadPointer(channel);
-                    auto* outputData = grainOutputBuffer.getWritePointer(channel);
-
-                    // Read sample from grain buffer
-                    float grainSample = grainBufData[readPos];
-
-                    // Apply window and overlap-add to output
-                    outputData[sample] += grainSample * windowValue;
+                    const auto* delayData = delayPathBuffer.getReadPointer(channel);
+                    auto* grainBufData = grainBuffer.getWritePointer(channel);
+                    grainBufData[grainBufferWritePos] = delayData[sample];
                 }
 
-                // Advance grain read position (pitch shift via playback rate)
-                grain.readPosition += readRate;
+                grainBufferWritePos = (grainBufferWritePos + 1) % grainBufferSize;
 
-                // Advance grain phase (normalized 0.0 to 1.0)
-                const float grainPhaseInc = 1.0f / static_cast<float>(grainSizeSamples);
-                grain.grainPhase += grainPhaseInc * (pitchEnable ? 1.0f : timeStretchFactor);
+                // Spawn grains
+                samplesSinceLastGrainSpawn++;
+                if (samplesSinceLastGrainSpawn >= grainAdvanceSamples)
+                {
+                    spawnGrain(pitchShiftRate);
+                    samplesSinceLastGrainSpawn = 0;
+                }
+
+                // Process active grains
+                for (auto& grain : grains)
+                {
+                    if (!grain.isActive || grain.grainPhase >= 1.0f)
+                    {
+                        grain.isActive = false;
+                        continue;
+                    }
+
+                    const int readPos = static_cast<int>(grain.readPosition) % grainBufferSize;
+                    const float windowValue = getHannWindowValue(grain.grainPhase);
+
+                    for (int channel = 0; channel < numChannels; ++channel)
+                    {
+                        const auto* grainBufData = grainBuffer.getReadPointer(channel);
+                        auto* outputData = grainOutputBuffer.getWritePointer(channel);
+                        outputData[sample] += grainBufData[readPos] * windowValue;
+                    }
+
+                    grain.readPosition += grain.playbackRate;
+                    grain.grainPhase += 1.0f / static_cast<float>(grainSizeSamples);
+                }
+            }
+
+            // Blend pitched output with delayed signal (50/50 mix for smoother result)
+            for (int channel = 0; channel < numChannels; ++channel)
+            {
+                auto* delayData = delayPathBuffer.getWritePointer(channel);
+                const auto* grainData = grainOutputBuffer.getReadPointer(channel);
+
+                for (int sample = 0; sample < numSamples; ++sample)
+                {
+                    delayData[sample] = delayData[sample] * 0.5f + grainData[sample] * 0.5f;
+                }
             }
         }
 
-        // Copy grain output to delay path buffer (replace delayed signal with pitch-shifted version)
+        // STEP 5: Store delayed output in feedback buffer for next iteration
         for (int channel = 0; channel < numChannels; ++channel)
         {
-            delayPathBuffer.copyFrom(channel, 0, grainOutputBuffer, channel, 0, numSamples);
-        }
-
-        // Apply delay level gain
-        for (int channel = 0; channel < numChannels; ++channel)
-        {
-            auto* delayData = delayPathBuffer.getWritePointer(channel);
-            juce::FloatVectorOperations::multiply(delayData, delayLevelGain, numSamples);
+            feedbackBuffer.copyFrom(channel, 0, delayPathBuffer, channel, 0, numSamples);
         }
     }
 

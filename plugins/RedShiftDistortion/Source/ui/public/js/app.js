@@ -20,15 +20,15 @@ const paramConfigs = {
     delayTime: {
         type: 'slider',
         min: 0.0,
-        max: 16000.0,
+        max: 2500.0,
         unit: 'ms',
         decimals: 1
     },
-    delayLevel: {
+    feedback: {
         type: 'slider',
-        min: -60.0,
-        max: 0.0,
-        unit: 'dB',
+        min: 0.0,
+        max: 95.0,
+        unit: '%',
         decimals: 1
     },
     distortionLevel: {

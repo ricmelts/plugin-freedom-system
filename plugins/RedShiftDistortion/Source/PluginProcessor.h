@@ -76,6 +76,7 @@ private:
     juce::AudioBuffer<float> delayPathBuffer;
     juce::AudioBuffer<float> distortionPathBuffer;
     juce::AudioBuffer<float> grainOutputBuffer;  // Granular synthesis output (pitch-shifted)
+    juce::AudioBuffer<float> feedbackBuffer;  // Stores delayed signal for feedback loop
 
     // Helper methods
     float quantizeDelayTimeToTempo(float hostBpm, float delayTimeMs);

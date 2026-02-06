@@ -10,7 +10,7 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     pitchEnableRelay = std::make_unique<juce::WebToggleButtonRelay>("pitchEnable");
     delayTimeRelay = std::make_unique<juce::WebSliderRelay>("delayTime");
     tempoSyncRelay = std::make_unique<juce::WebToggleButtonRelay>("tempoSync");
-    delayLevelRelay = std::make_unique<juce::WebSliderRelay>("delayLevel");
+    feedbackRelay = std::make_unique<juce::WebSliderRelay>("feedback");
     distortionLevelRelay = std::make_unique<juce::WebSliderRelay>("distortionLevel");
     masterOutputRelay = std::make_unique<juce::WebSliderRelay>("masterOutput");
 
@@ -24,7 +24,7 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
             .withOptionsFrom(*pitchEnableRelay)
             .withOptionsFrom(*delayTimeRelay)
             .withOptionsFrom(*tempoSyncRelay)
-            .withOptionsFrom(*delayLevelRelay)
+            .withOptionsFrom(*feedbackRelay)
             .withOptionsFrom(*distortionLevelRelay)
             .withOptionsFrom(*masterOutputRelay)
     );
@@ -45,8 +45,8 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     tempoSyncAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
         *processorRef.parameters.getParameter("tempoSync"), *tempoSyncRelay, nullptr);
 
-    delayLevelAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *processorRef.parameters.getParameter("delayLevel"), *delayLevelRelay, nullptr);
+    feedbackAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("feedback"), *feedbackRelay, nullptr);
 
     distortionLevelAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("distortionLevel"), *distortionLevelRelay, nullptr);

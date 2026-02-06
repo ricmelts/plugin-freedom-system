@@ -24,7 +24,7 @@ private:
     std::unique_ptr<juce::WebToggleButtonRelay> pitchEnableRelay;
     std::unique_ptr<juce::WebSliderRelay> delayTimeRelay;
     std::unique_ptr<juce::WebToggleButtonRelay> tempoSyncRelay;
-    std::unique_ptr<juce::WebSliderRelay> delayLevelRelay;
+    std::unique_ptr<juce::WebSliderRelay> feedbackRelay;
     std::unique_ptr<juce::WebSliderRelay> distortionLevelRelay;
     std::unique_ptr<juce::WebSliderRelay> masterOutputRelay;
 
@@ -37,7 +37,7 @@ private:
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> pitchEnableAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> delayTimeAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> tempoSyncAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment> delayLevelAttachment;
+    std::unique_ptr<juce::WebSliderParameterAttachment> feedbackAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> distortionLevelAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> masterOutputAttachment;
 
