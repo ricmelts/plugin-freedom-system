@@ -24,8 +24,8 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 20px;
-    gap: 15px;
+    padding: 15px;
+    gap: 12px;
 }
 
 /* Header */
@@ -35,11 +35,11 @@ body {
 }
 
 .header h1 {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 600;
     color: #ff6b6b;
     text-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
-    margin-bottom: 5px;
+    margin-bottom: 3px;
 }
 
 .subtitle {
@@ -63,7 +63,7 @@ h2 {
 .mixer-section {
     display: flex;
     justify-content: space-around;
-    align-items: flex-start;
+    align-items: center;
     gap: 20px;
     padding: 15px;
     background: rgba(255, 255, 255, 0.05);
@@ -72,16 +72,13 @@ h2 {
 }
 
 .mixer-section {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
 }
 
-.mixer-section > div:first-child {
+.mixer-section h2 {
     width: 100%;
-}
-
-.mixer-section > .control-group:not(h2) {
-    display: inline-flex;
-    flex-direction: column;
+    text-align: center;
 }
 
 .controls-section {
@@ -107,8 +104,8 @@ h2 {
 /* Knob Styling */
 .knob {
     position: relative;
-    width: 70px;
-    height: 70px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: linear-gradient(145deg, #2a2a40, #1a1a2e);
     box-shadow:
@@ -125,23 +122,23 @@ h2 {
 
 .knob-track {
     position: absolute;
-    top: 8px;
-    left: 8px;
-    width: 54px;
-    height: 54px;
+    top: 7px;
+    left: 7px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
     border: 2px solid rgba(255, 107, 107, 0.3);
 }
 
 .knob-indicator {
     position: absolute;
-    top: 10px;
+    top: 8px;
     left: 50%;
     width: 3px;
-    height: 25px;
+    height: 22px;
     background: linear-gradient(180deg, #ff6b6b 0%, #ff4444 100%);
     border-radius: 2px;
-    transform-origin: 50% 60px;
+    transform-origin: 50% 52px;
     transform: translateX(-50%) rotate(-135deg);
     box-shadow: 0 0 6px rgba(255, 107, 107, 0.6);
 }
