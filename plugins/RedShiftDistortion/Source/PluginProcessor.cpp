@@ -23,29 +23,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         "%"
     ));
 
-    // pitchEnable - Bool (default: true)
-    layout.add(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID { "pitchEnable", 1 },
-        "Pitch Enable",
-        true
-    ));
-
-    // delayTime - Float (0.0 to 2500.0 ms)
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "delayTime", 1 },
-        "Delay Time",
-        juce::NormalisableRange<float>(0.0f, 2500.0f, 1.0f),
-        250.0f,
-        "ms"
-    ));
-
-    // tempoSync - Bool (default: true)
-    layout.add(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID { "tempoSync", 1 },
-        "Tempo Sync",
-        true
-    ));
-
     // feedback - Float (0.0 to 95.0 %)
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "feedback", 1 },
@@ -93,12 +70,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
 
     // Bypass toggles for troubleshooting
     layout.add(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID { "bypassDelay", 1 },
-        "Bypass Delay",
-        false
-    ));
-
-    layout.add(std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID { "bypassSaturation", 1 },
         "Bypass Saturation",
         false
@@ -132,8 +103,8 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
     spec.numChannels = 2;  // Stereo only
 
-    // Prepare stereo delay lines (maximum 3 seconds at 192kHz)
-    const int maxDelaySamples = static_cast<int>(sampleRate * 3.0);
+    // Prepare stereo delay lines (only need ~1ms for base Doppler delay)
+    const int maxDelaySamples = static_cast<int>(sampleRate * 0.01);  // 10ms max
     delayLineLeft.setMaximumDelayInSamples(maxDelaySamples);
     delayLineRight.setMaximumDelayInSamples(maxDelaySamples);
 
@@ -153,10 +124,6 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     hiCutFilter.reset();
     loCutFilter.reset();
 
-    // Initialize delay time smoothing
-    currentDelayTimeMs = 250.0f;
-    targetDelayTimeMs = 250.0f;
-
     // Initialize doppler control smoothing
     currentDopplerControl = 0.0f;
 }
@@ -165,61 +132,6 @@ void RedShiftDistortionAudioProcessor::releaseResources()
 {
     // Release feedback buffer to save memory when plugin not in use
     feedbackBuffer.setSize(0, 0);
-}
-
-float RedShiftDistortionAudioProcessor::getHostBpm()
-{
-    // Query host BPM via AudioPlayHead (real-time safe)
-    if (auto* playHead = getPlayHead())
-    {
-        if (auto positionInfo = playHead->getPosition())
-        {
-            if (auto bpm = positionInfo->getBpm())
-            {
-                // Clamp BPM to valid range (20-300 BPM)
-                return static_cast<float>(juce::jlimit(20.0, 300.0, *bpm));
-            }
-        }
-    }
-
-    // Fallback to 120 BPM if host doesn't provide tempo
-    return 120.0;
-}
-
-float RedShiftDistortionAudioProcessor::quantizeDelayTimeToTempo(float hostBpm, float delayTimeMs)
-{
-    // Note divisions in beats (4/4 time signature)
-    const float divisions[] = {
-        0.25f,  // 1/16 note
-        0.5f,   // 1/8 note
-        1.0f,   // 1/4 note
-        2.0f,   // 1/2 note
-        4.0f,   // 1 bar
-        8.0f,   // 2 bars
-        16.0f,  // 4 bars
-        32.0f   // 8 bars
-    };
-
-    // Convert current delayTimeMs to beats
-    const float beatsFromMs = (delayTimeMs * hostBpm) / 60000.0f;
-
-    // Find nearest note division
-    float nearestDivision = divisions[0];
-    float minDistance = std::abs(beatsFromMs - nearestDivision);
-
-    for (float division : divisions)
-    {
-        float distance = std::abs(beatsFromMs - division);
-        if (distance < minDistance)
-        {
-            minDistance = distance;
-            nearestDivision = division;
-        }
-    }
-
-    // Convert nearest division back to milliseconds
-    // Formula: ms = (60000 / bpm) * beats
-    return (60000.0f / hostBpm) * nearestDivision;
 }
 
 void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -234,29 +146,23 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     // Read parameters (atomic, real-time safe)
     auto* saturationParam = parameters.getRawParameterValue("saturation");
     auto* dopplerShiftParam = parameters.getRawParameterValue("dopplerShift");
-    auto* delayTimeParam = parameters.getRawParameterValue("delayTime");
-    auto* tempoSyncParam = parameters.getRawParameterValue("tempoSync");
     auto* feedbackParam = parameters.getRawParameterValue("feedback");
     auto* hiCutParam = parameters.getRawParameterValue("hiCut");
     auto* loCutParam = parameters.getRawParameterValue("loCut");
     auto* masterOutputParam = parameters.getRawParameterValue("masterOutput");
 
     // Bypass parameters
-    auto* bypassDelayParam = parameters.getRawParameterValue("bypassDelay");
     auto* bypassSaturationParam = parameters.getRawParameterValue("bypassSaturation");
     auto* bypassDopplerParam = parameters.getRawParameterValue("bypassDoppler");
 
     float saturationDb = saturationParam->load();
     float dopplerShift = dopplerShiftParam->load();
-    float delayTimeMs = delayTimeParam->load();
-    bool tempoSync = tempoSyncParam->load() > 0.5f;
     float feedbackPercent = feedbackParam->load();
     float hiCutFreq = hiCutParam->load();
     float loCutFreq = loCutParam->load();
     float masterOutputDb = masterOutputParam->load();
 
     // Bypass states
-    bool bypassDelay = bypassDelayParam->load() > 0.5f;
     bool bypassSaturation = bypassSaturationParam->load() > 0.5f;
     bool bypassDoppler = bypassDopplerParam->load() > 0.5f;
 
@@ -265,26 +171,9 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     float feedbackGain = feedbackPercent / 100.0f;  // 0-95% → 0.0-0.95
     float masterOutputGain = std::pow(10.0f, masterOutputDb / 20.0f);
 
-    // TEMPO SYNC: Calculate target delay time
-    if (tempoSync)
-    {
-        // Get host BPM and quantize delay time to nearest note division
-        float hostBpm = getHostBpm();
-        targetDelayTimeMs = quantizeDelayTimeToTempo(hostBpm, delayTimeMs);
-    }
-    else
-    {
-        // Free time mode: use parameter value directly
-        targetDelayTimeMs = delayTimeMs;
-    }
-
-    // SMOOTH DELAY TIME TRANSITIONS: Prevent clicks when switching modes or tempo changes
-    const float smoothingFactor = 0.05f;  // 5% per buffer
-    currentDelayTimeMs += (targetDelayTimeMs - currentDelayTimeMs) * smoothingFactor;
-
     // SMOOTH DOPPLER CONTROL: Map from -50% to +50% → -1 to +1
     const float targetDopplerControl = bypassDoppler ? 0.0f : (dopplerShift / 50.0f);
-    const float dopplerSmoothingFactor = 0.01f;  // Slower smoothing for doppler (avoid artifacts)
+    const float dopplerSmoothingFactor = 0.01f;  // Smooth to avoid clicks
     currentDopplerControl += (targetDopplerControl - currentDopplerControl) * dopplerSmoothingFactor;
 
     const int numSamples = buffer.getNumSamples();
@@ -300,10 +189,10 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 
     // Psychoacoustic Doppler Delay Constants
     const float ITD_MAX = 0.00052f;  // 520 microseconds (ear separation)
-    const float BASE_DELAY_MS = 1.0f;  // 1ms stability offset
+    const float BASE_DELAY_MS = 1.0f;  // 1ms stability offset (d0)
 
     // Calculate base delay (d0) in samples
-    const float d0Samples = ((currentDelayTimeMs + BASE_DELAY_MS) / 1000.0f) * static_cast<float>(spec.sampleRate);
+    const float d0Samples = (BASE_DELAY_MS / 1000.0f) * static_cast<float>(spec.sampleRate);
 
     // Calculate differential delay from psychoacoustic ITD
     // deltaDelay(t) = (ITD_MAX / 2) * x(t)   where x(t) ∈ [-1, 1]
@@ -325,7 +214,7 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
         float leftIn = buffer.getSample(0, sample);
         float rightIn = buffer.getSample(1, sample);
 
-        if (!bypassDelay)
+        if (!bypassDoppler)
         {
             // Add filtered feedback to input
             leftIn += feedbackBuffer.getSample(0, sample) * feedbackGain;
@@ -366,7 +255,7 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     // POST-PROCESSING: Filter feedback buffer for next iteration
     // ─────────────────────────────────────────────────────────────────────────
 
-    if (!bypassDelay && feedbackGain > 0.001f)
+    if (!bypassDoppler && feedbackGain > 0.001f)
     {
         juce::dsp::AudioBlock<float> feedbackBlock(feedbackBuffer);
         juce::dsp::ProcessContextReplacing<float> feedbackContext(feedbackBlock);

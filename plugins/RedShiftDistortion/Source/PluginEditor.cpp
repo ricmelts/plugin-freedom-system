@@ -7,14 +7,11 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     // 1. Create relays FIRST (initialize with parameter IDs matching APVTS)
     saturationRelay = std::make_unique<juce::WebSliderRelay>("saturation");
     dopplerShiftRelay = std::make_unique<juce::WebSliderRelay>("dopplerShift");
-    delayTimeRelay = std::make_unique<juce::WebSliderRelay>("delayTime");
-    tempoSyncRelay = std::make_unique<juce::WebToggleButtonRelay>("tempoSync");
     feedbackRelay = std::make_unique<juce::WebSliderRelay>("feedback");
     hiCutRelay = std::make_unique<juce::WebSliderRelay>("hiCut");
     loCutRelay = std::make_unique<juce::WebSliderRelay>("loCut");
     masterOutputRelay = std::make_unique<juce::WebSliderRelay>("masterOutput");
     bypassSaturationRelay = std::make_unique<juce::WebToggleButtonRelay>("bypassSaturation");
-    bypassDelayRelay = std::make_unique<juce::WebToggleButtonRelay>("bypassDelay");
     bypassDopplerRelay = std::make_unique<juce::WebToggleButtonRelay>("bypassDoppler");
 
     // 2. Create WebView with relay options
@@ -24,14 +21,11 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
             .withResourceProvider([this](const auto& url) { return getResource(url); })
             .withOptionsFrom(*saturationRelay)
             .withOptionsFrom(*dopplerShiftRelay)
-            .withOptionsFrom(*delayTimeRelay)
-            .withOptionsFrom(*tempoSyncRelay)
             .withOptionsFrom(*feedbackRelay)
             .withOptionsFrom(*hiCutRelay)
             .withOptionsFrom(*loCutRelay)
             .withOptionsFrom(*masterOutputRelay)
             .withOptionsFrom(*bypassSaturationRelay)
-            .withOptionsFrom(*bypassDelayRelay)
             .withOptionsFrom(*bypassDopplerRelay)
     );
 
@@ -41,12 +35,6 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
 
     dopplerShiftAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("dopplerShift"), *dopplerShiftRelay, nullptr);
-
-    delayTimeAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *processorRef.parameters.getParameter("delayTime"), *delayTimeRelay, nullptr);
-
-    tempoSyncAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
-        *processorRef.parameters.getParameter("tempoSync"), *tempoSyncRelay, nullptr);
 
     feedbackAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("feedback"), *feedbackRelay, nullptr);
@@ -62,9 +50,6 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
 
     bypassSaturationAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
         *processorRef.parameters.getParameter("bypassSaturation"), *bypassSaturationRelay, nullptr);
-
-    bypassDelayAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
-        *processorRef.parameters.getParameter("bypassDelay"), *bypassDelayRelay, nullptr);
 
     bypassDopplerAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
         *processorRef.parameters.getParameter("bypassDoppler"), *bypassDopplerRelay, nullptr);

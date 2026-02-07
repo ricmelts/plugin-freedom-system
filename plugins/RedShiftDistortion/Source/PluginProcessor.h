@@ -43,10 +43,6 @@ private:
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLineLeft;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLineRight;
 
-    // Delay time smoothing
-    float currentDelayTimeMs { 250.0f };
-    float targetDelayTimeMs { 250.0f };
-
     // Feedback buffer (stores delayed signal for feedback loop)
     juce::AudioBuffer<float> feedbackBuffer;
 
@@ -57,9 +53,7 @@ private:
     // Doppler control smoothing (avoid clicks)
     float currentDopplerControl { 0.0f };
 
-    // Helper methods
-    float quantizeDelayTimeToTempo(float hostBpm, float delayTimeMs);
-    float getHostBpm();
+    // Helper methods (none needed)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RedShiftDistortionAudioProcessor)
 };

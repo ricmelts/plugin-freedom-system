@@ -17,13 +17,6 @@ const paramConfigs = {
         unit: '%',
         decimals: 1
     },
-    delayTime: {
-        type: 'slider',
-        min: 0.0,
-        max: 2500.0,
-        unit: 'ms',
-        decimals: 1
-    },
     feedback: {
         type: 'slider',
         min: 0.0,
@@ -52,13 +45,7 @@ const paramConfigs = {
         unit: 'dB',
         decimals: 1
     },
-    tempoSync: {
-        type: 'toggle'
-    },
     bypassSaturation: {
-        type: 'toggle'
-    },
-    bypassDelay: {
         type: 'toggle'
     },
     bypassDoppler: {
