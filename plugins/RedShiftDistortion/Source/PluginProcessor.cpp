@@ -235,12 +235,22 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
         if (!bypassDoppler)
         {
             // Add filtered feedback to input
-            leftIn += feedbackBuffer.getSample(0, sample) * feedbackGain;
-            rightIn += feedbackBuffer.getSample(1, sample) * feedbackGain;
+            float feedbackL = feedbackBuffer.getSample(0, sample) * feedbackGain;
+            float feedbackR = feedbackBuffer.getSample(1, sample) * feedbackGain;
+            leftIn += feedbackL;
+            rightIn += feedbackR;
 
             // Apply psychoacoustic doppler delay (fractional delay with linear interpolation)
-            leftIn = delayLineLeft.popSample(0, leftIn);
-            rightIn = delayLineRight.popSample(0, rightIn);
+            // CRITICAL: Push samples INTO delay line first
+            delayLineLeft.pushSample(0, leftIn);
+            delayLineRight.pushSample(0, rightIn);
+
+            // Then pop delayed samples OUT (uses delay set by setDelay())
+            float delayedL = delayLineLeft.popSample(0);
+            float delayedR = delayLineRight.popSample(0);
+
+            leftIn = delayedL;
+            rightIn = delayedR;
 
             // Store delayed signal for feedback (will be filtered below)
             feedbackBuffer.setSample(0, sample, leftIn);
