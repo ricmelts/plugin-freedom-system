@@ -179,6 +179,13 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     const int numSamples = buffer.getNumSamples();
     const int numChannels = buffer.getNumChannels();
 
+    // Ensure feedback buffer matches current block size
+    if (feedbackBuffer.getNumSamples() != numSamples)
+    {
+        feedbackBuffer.setSize(2, numSamples, false, false, true);
+        feedbackBuffer.clear();
+    }
+
     // Update feedback filter coefficients (only when they change significantly)
     *hiCutFilter.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(spec.sampleRate, hiCutFreq);
     *loCutFilter.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(spec.sampleRate, loCutFreq);
