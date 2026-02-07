@@ -10,7 +10,8 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     delayTimeRelay = std::make_unique<juce::WebSliderRelay>("delayTime");
     tempoSyncRelay = std::make_unique<juce::WebToggleButtonRelay>("tempoSync");
     feedbackRelay = std::make_unique<juce::WebSliderRelay>("feedback");
-    distortionLevelRelay = std::make_unique<juce::WebSliderRelay>("distortionLevel");
+    hiCutRelay = std::make_unique<juce::WebSliderRelay>("hiCut");
+    loCutRelay = std::make_unique<juce::WebSliderRelay>("loCut");
     masterOutputRelay = std::make_unique<juce::WebSliderRelay>("masterOutput");
     bypassSaturationRelay = std::make_unique<juce::WebToggleButtonRelay>("bypassSaturation");
     bypassDelayRelay = std::make_unique<juce::WebToggleButtonRelay>("bypassDelay");
@@ -26,7 +27,8 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
             .withOptionsFrom(*delayTimeRelay)
             .withOptionsFrom(*tempoSyncRelay)
             .withOptionsFrom(*feedbackRelay)
-            .withOptionsFrom(*distortionLevelRelay)
+            .withOptionsFrom(*hiCutRelay)
+            .withOptionsFrom(*loCutRelay)
             .withOptionsFrom(*masterOutputRelay)
             .withOptionsFrom(*bypassSaturationRelay)
             .withOptionsFrom(*bypassDelayRelay)
@@ -49,8 +51,11 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     feedbackAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("feedback"), *feedbackRelay, nullptr);
 
-    distortionLevelAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *processorRef.parameters.getParameter("distortionLevel"), *distortionLevelRelay, nullptr);
+    hiCutAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("hiCut"), *hiCutRelay, nullptr);
+
+    loCutAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("loCut"), *loCutRelay, nullptr);
 
     masterOutputAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("masterOutput"), *masterOutputRelay, nullptr);

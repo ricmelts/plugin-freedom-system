@@ -31,12 +31,19 @@ const paramConfigs = {
         unit: '%',
         decimals: 1
     },
-    distortionLevel: {
+    hiCut: {
         type: 'slider',
-        min: -60.0,
-        max: 0.0,
-        unit: 'dB',
-        decimals: 1
+        min: 2000.0,
+        max: 10000.0,
+        unit: 'Hz',
+        decimals: 0
+    },
+    loCut: {
+        type: 'slider',
+        min: 50.0,
+        max: 1000.0,
+        unit: 'Hz',
+        decimals: 0
     },
     masterOutput: {
         type: 'slider',

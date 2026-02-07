@@ -55,6 +55,24 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         "%"
     ));
 
+    // hiCut - Float (2000.0 to 10000.0 Hz) for tape delay feedback filtering
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { "hiCut", 1 },
+        "Hi Cut",
+        juce::NormalisableRange<float>(2000.0f, 10000.0f, 10.0f),
+        8000.0f,
+        "Hz"
+    ));
+
+    // loCut - Float (50.0 to 1000.0 Hz) for tape delay feedback filtering
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { "loCut", 1 },
+        "Lo Cut",
+        juce::NormalisableRange<float>(50.0f, 1000.0f, 1.0f),
+        100.0f,
+        "Hz"
+    ));
+
     // distortionLevel - Float (-60.0 to 0.0 dB)
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "distortionLevel", 1 },
@@ -124,27 +142,29 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     delayLineLeft.reset();
     delayLineRight.reset();
 
-    // Pre-allocate processing buffers (real-time safety)
+    // Pre-allocate feedback buffer (real-time safety)
     const int numChannels = 2;  // Force stereo
-    delayPathBuffer.setSize(numChannels, samplesPerBlock);
-    distortionPathBuffer.setSize(numChannels, samplesPerBlock);
     feedbackBuffer.setSize(numChannels, samplesPerBlock);
-
-    // Clear buffers
-    delayPathBuffer.clear();
-    distortionPathBuffer.clear();
     feedbackBuffer.clear();
+
+    // Prepare tape delay feedback filters
+    hiCutFilter.prepare(spec);
+    loCutFilter.prepare(spec);
+    hiCutFilter.reset();
+    loCutFilter.reset();
 
     // Initialize delay time smoothing
     currentDelayTimeMs = 250.0f;
     targetDelayTimeMs = 250.0f;
+
+    // Initialize doppler control smoothing
+    currentDopplerControl = 0.0f;
 }
 
 void RedShiftDistortionAudioProcessor::releaseResources()
 {
-    // Release large buffers to save memory when plugin not in use
-    delayPathBuffer.setSize(0, 0);
-    distortionPathBuffer.setSize(0, 0);
+    // Release feedback buffer to save memory when plugin not in use
+    feedbackBuffer.setSize(0, 0);
 }
 
 float RedShiftDistortionAudioProcessor::getHostBpm()
@@ -217,7 +237,8 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     auto* delayTimeParam = parameters.getRawParameterValue("delayTime");
     auto* tempoSyncParam = parameters.getRawParameterValue("tempoSync");
     auto* feedbackParam = parameters.getRawParameterValue("feedback");
-    auto* distortionLevelParam = parameters.getRawParameterValue("distortionLevel");
+    auto* hiCutParam = parameters.getRawParameterValue("hiCut");
+    auto* loCutParam = parameters.getRawParameterValue("loCut");
     auto* masterOutputParam = parameters.getRawParameterValue("masterOutput");
 
     // Bypass parameters
@@ -230,7 +251,8 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     float delayTimeMs = delayTimeParam->load();
     bool tempoSync = tempoSyncParam->load() > 0.5f;
     float feedbackPercent = feedbackParam->load();
-    float distortionLevelDb = distortionLevelParam->load();
+    float hiCutFreq = hiCutParam->load();
+    float loCutFreq = loCutParam->load();
     float masterOutputDb = masterOutputParam->load();
 
     // Bypass states
@@ -241,7 +263,6 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     // Convert parameters to usable values
     float saturationGain = std::pow(10.0f, saturationDb / 20.0f);
     float feedbackGain = feedbackPercent / 100.0f;  // 0-95% → 0.0-0.95
-    float distortionLevelGain = std::pow(10.0f, distortionLevelDb / 20.0f);
     float masterOutputGain = std::pow(10.0f, masterOutputDb / 20.0f);
 
     // TEMPO SYNC: Calculate target delay time
@@ -258,136 +279,101 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     }
 
     // SMOOTH DELAY TIME TRANSITIONS: Prevent clicks when switching modes or tempo changes
-    // Exponential smoothing: fast enough to track tempo changes, slow enough to avoid clicks
-    const float smoothingFactor = 0.05f;  // 5% per buffer (~10ms smoothing at 512 samples @ 48kHz)
+    const float smoothingFactor = 0.05f;  // 5% per buffer
     currentDelayTimeMs += (targetDelayTimeMs - currentDelayTimeMs) * smoothingFactor;
+
+    // SMOOTH DOPPLER CONTROL: Map from -50% to +50% → -1 to +1
+    const float targetDopplerControl = bypassDoppler ? 0.0f : (dopplerShift / 50.0f);
+    const float dopplerSmoothingFactor = 0.01f;  // Slower smoothing for doppler (avoid artifacts)
+    currentDopplerControl += (targetDopplerControl - currentDopplerControl) * dopplerSmoothingFactor;
 
     const int numSamples = buffer.getNumSamples();
     const int numChannels = buffer.getNumChannels();
 
-    // Ensure parallel path buffers are sized correctly
-    if (delayPathBuffer.getNumSamples() < numSamples)
+    // Update feedback filter coefficients (only when they change significantly)
+    *hiCutFilter.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(spec.sampleRate, hiCutFreq);
+    *loCutFilter.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(spec.sampleRate, loCutFreq);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SERIES PROCESSING CHAIN: Input → Doppler Delay → Saturation → Output
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // Psychoacoustic Doppler Delay Constants
+    const float ITD_MAX = 0.00052f;  // 520 microseconds (ear separation)
+    const float BASE_DELAY_MS = 1.0f;  // 1ms stability offset
+
+    // Calculate base delay (d0) in samples
+    const float d0Samples = ((currentDelayTimeMs + BASE_DELAY_MS) / 1000.0f) * static_cast<float>(spec.sampleRate);
+
+    // Calculate differential delay from psychoacoustic ITD
+    // deltaDelay(t) = (ITD_MAX / 2) * x(t)   where x(t) ∈ [-1, 1]
+    const float deltaDelaySamples = (ITD_MAX / 2.0f) * currentDopplerControl * static_cast<float>(spec.sampleRate);
+
+    // Compute L/R delay times with opposite differential
+    // delayLeft(t)  = d0 + deltaDelay(t)
+    // delayRight(t) = d0 - deltaDelay(t)
+    const float leftDelaySamples = d0Samples + deltaDelaySamples;
+    const float rightDelaySamples = d0Samples - deltaDelaySamples;
+
+    // Process each sample through the series chain
+    for (int sample = 0; sample < numSamples; ++sample)
     {
-        delayPathBuffer.setSize(numChannels, numSamples, false, false, true);
-        distortionPathBuffer.setSize(numChannels, numSamples, false, false, true);
+        // ─────────────────────────────────────────────────────────────────────
+        // STAGE 1: DOPPLER DELAY (with feedback)
+        // ─────────────────────────────────────────────────────────────────────
+
+        float leftIn = buffer.getSample(0, sample);
+        float rightIn = buffer.getSample(1, sample);
+
+        if (!bypassDelay)
+        {
+            // Add filtered feedback to input
+            leftIn += feedbackBuffer.getSample(0, sample) * feedbackGain;
+            rightIn += feedbackBuffer.getSample(1, sample) * feedbackGain;
+
+            // Apply psychoacoustic doppler delay (fractional delay with linear interpolation)
+            delayLineLeft.setDelay(leftDelaySamples);
+            delayLineRight.setDelay(rightDelaySamples);
+
+            leftIn = delayLineLeft.popSample(0, leftIn);
+            rightIn = delayLineRight.popSample(0, rightIn);
+
+            // Store delayed signal for feedback (will be filtered below)
+            feedbackBuffer.setSample(0, sample, leftIn);
+            feedbackBuffer.setSample(1, sample, rightIn);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // STAGE 2: SATURATION
+        // ─────────────────────────────────────────────────────────────────────
+
+        if (!bypassSaturation)
+        {
+            // Tube saturation: output = tanh(gain * input)
+            leftIn = std::tanh(saturationGain * leftIn);
+            rightIn = std::tanh(saturationGain * rightIn);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // STAGE 3: MASTER OUTPUT
+        // ─────────────────────────────────────────────────────────────────────
+
+        buffer.setSample(0, sample, leftIn * masterOutputGain);
+        buffer.setSample(1, sample, rightIn * masterOutputGain);
     }
 
-    // PARALLEL ROUTING: Duplicate input to both paths
-    for (int channel = 0; channel < numChannels; ++channel)
+    // ─────────────────────────────────────────────────────────────────────────
+    // POST-PROCESSING: Filter feedback buffer for next iteration
+    // ─────────────────────────────────────────────────────────────────────────
+
+    if (!bypassDelay && feedbackGain > 0.001f)
     {
-        delayPathBuffer.copyFrom(channel, 0, buffer, channel, 0, numSamples);
-        distortionPathBuffer.copyFrom(channel, 0, buffer, channel, 0, numSamples);
-    }
+        juce::dsp::AudioBlock<float> feedbackBlock(feedbackBuffer);
+        juce::dsp::ProcessContextReplacing<float> feedbackContext(feedbackBlock);
 
-    // DELAY PATH PROCESSING
-    if (!bypassDelay)
-    {
-        // STEP 1: Add feedback from previous iteration
-        for (int channel = 0; channel < numChannels; ++channel)
-        {
-            auto* delayInput = delayPathBuffer.getWritePointer(channel);
-            const auto* feedbackData = feedbackBuffer.getReadPointer(channel);
-
-            for (int sample = 0; sample < numSamples; ++sample)
-            {
-                delayInput[sample] += feedbackData[sample] * feedbackGain;
-            }
-        }
-
-        // STEP 2: Calculate base delay time
-        const float baseDelaySamples = (currentDelayTimeMs / 1000.0f) * static_cast<float>(spec.sampleRate);
-
-        // STEP 3: Apply doppler effect as L/R distance shift (if not bypassed)
-        float leftDelaySamples = baseDelaySamples;
-        float rightDelaySamples = baseDelaySamples;
-
-        if (!bypassDoppler && std::abs(dopplerShift) > 0.01f)
-        {
-            // Doppler shift percentage controls L/R distance offset
-            // Physics-based: delay_offset = (distance_shift / speed_of_sound) * sampleRate
-            // Simplified: percentage directly controls additional delay in samples
-
-            // Maximum offset: 50ms (at ±50% doppler shift)
-            const float maxOffsetMs = 50.0f;
-            const float offsetMs = (dopplerShift / 100.0f) * maxOffsetMs;  // -50% to +50% → -50ms to +50ms
-            const float offsetSamples = (offsetMs / 1000.0f) * static_cast<float>(spec.sampleRate);
-
-            // Apply asymmetric delay to create stereo width
-            // Positive shift: right channel delayed (source appears left)
-            // Negative shift: left channel delayed (source appears right)
-            if (dopplerShift > 0.0f)
-            {
-                rightDelaySamples += offsetSamples;  // Right ear delayed
-            }
-            else
-            {
-                leftDelaySamples += std::abs(offsetSamples);  // Left ear delayed
-            }
-        }
-
-        // STEP 4: Process stereo delay lines independently
-        delayLineLeft.setDelay(leftDelaySamples);
-        delayLineRight.setDelay(rightDelaySamples);
-
-        // Process left channel
-        for (int sample = 0; sample < numSamples; ++sample)
-        {
-            auto* leftData = delayPathBuffer.getWritePointer(0);
-            leftData[sample] = delayLineLeft.popSample(0, leftData[sample]);
-        }
-
-        // Process right channel
-        for (int sample = 0; sample < numSamples; ++sample)
-        {
-            auto* rightData = delayPathBuffer.getWritePointer(1);
-            rightData[sample] = delayLineRight.popSample(0, rightData[sample]);
-        }
-
-
-        // STEP 5: Store delayed output in feedback buffer for next iteration
-        for (int channel = 0; channel < numChannels; ++channel)
-        {
-            feedbackBuffer.copyFrom(channel, 0, delayPathBuffer, channel, 0, numSamples);
-        }
-    }
-    // If delay is bypassed, delayPathBuffer remains as clean input copy
-
-    // DISTORTION PATH PROCESSING
-    if (!bypassSaturation)
-    {
-        // Apply tube saturation (tanh waveshaping)
-        for (int channel = 0; channel < numChannels; ++channel)
-        {
-            auto* distData = distortionPathBuffer.getWritePointer(channel);
-
-            for (int sample = 0; sample < numSamples; ++sample)
-            {
-                // Tube saturation: output = tanh(gain * input)
-                distData[sample] = std::tanh(saturationGain * distData[sample]);
-            }
-        }
-
-        // Apply distortion level gain
-        for (int channel = 0; channel < numChannels; ++channel)
-        {
-            auto* distData = distortionPathBuffer.getWritePointer(channel);
-            juce::FloatVectorOperations::multiply(distData, distortionLevelGain, numSamples);
-        }
-    }
-    // If saturation is bypassed, distortionPathBuffer remains as clean input copy
-
-    // OUTPUT MIXER: Sum both paths + apply master gain
-    for (int channel = 0; channel < numChannels; ++channel)
-    {
-        auto* outputData = buffer.getWritePointer(channel);
-        const auto* delayData = delayPathBuffer.getReadPointer(channel);
-        const auto* distData = distortionPathBuffer.getReadPointer(channel);
-
-        for (int sample = 0; sample < numSamples; ++sample)
-        {
-            // Parallel mix: sum both paths
-            outputData[sample] = (delayData[sample] + distData[sample]) * masterOutputGain;
-        }
+        // Apply lo-cut (high-pass) then hi-cut (low-pass) to feedback signal
+        loCutFilter.process(feedbackContext);
+        hiCutFilter.process(feedbackContext);
     }
 }
 

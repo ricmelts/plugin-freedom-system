@@ -50,9 +50,12 @@ private:
     // Feedback buffer (stores delayed signal for feedback loop)
     juce::AudioBuffer<float> feedbackBuffer;
 
-    // Processing buffers
-    juce::AudioBuffer<float> delayPathBuffer;
-    juce::AudioBuffer<float> distortionPathBuffer;
+    // Tape delay feedback filters (hi-cut and lo-cut)
+    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> hiCutFilter;
+    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> loCutFilter;
+
+    // Doppler control smoothing (avoid clicks)
+    float currentDopplerControl { 0.0f };
 
     // Helper methods
     float quantizeDelayTimeToTempo(float hostBpm, float delayTimeMs);

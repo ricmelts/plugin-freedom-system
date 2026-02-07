@@ -64,14 +64,24 @@
                 <div class="value-display" id="feedback-value">0.0 %</div>
             </div>
 
-            <!-- Distortion Level -->
+            <!-- Hi Cut (Tape Delay Filter) -->
             <div class="control-group">
-                <label for="distortionLevel">Distortion Level</label>
-                <div class="knob" id="distortionLevel" data-param="distortionLevel">
+                <label for="hiCut">Hi Cut</label>
+                <div class="knob" id="hiCut" data-param="hiCut">
                     <div class="knob-track"></div>
                     <div class="knob-indicator"></div>
                 </div>
-                <div class="value-display" id="distortionLevel-value">-6.0 dB</div>
+                <div class="value-display" id="hiCut-value">8000 Hz</div>
+            </div>
+
+            <!-- Lo Cut (Tape Delay Filter) -->
+            <div class="control-group">
+                <label for="loCut">Lo Cut</label>
+                <div class="knob" id="loCut" data-param="loCut">
+                    <div class="knob-track"></div>
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="value-display" id="loCut-value">100 Hz</div>
             </div>
 
             <!-- Master Output -->

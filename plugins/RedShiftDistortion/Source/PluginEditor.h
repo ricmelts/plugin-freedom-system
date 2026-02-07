@@ -24,7 +24,8 @@ private:
     std::unique_ptr<juce::WebSliderRelay> delayTimeRelay;
     std::unique_ptr<juce::WebToggleButtonRelay> tempoSyncRelay;
     std::unique_ptr<juce::WebSliderRelay> feedbackRelay;
-    std::unique_ptr<juce::WebSliderRelay> distortionLevelRelay;
+    std::unique_ptr<juce::WebSliderRelay> hiCutRelay;
+    std::unique_ptr<juce::WebSliderRelay> loCutRelay;
     std::unique_ptr<juce::WebSliderRelay> masterOutputRelay;
     std::unique_ptr<juce::WebToggleButtonRelay> bypassSaturationRelay;
     std::unique_ptr<juce::WebToggleButtonRelay> bypassDelayRelay;
@@ -39,7 +40,8 @@ private:
     std::unique_ptr<juce::WebSliderParameterAttachment> delayTimeAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> tempoSyncAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> feedbackAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment> distortionLevelAttachment;
+    std::unique_ptr<juce::WebSliderParameterAttachment> hiCutAttachment;
+    std::unique_ptr<juce::WebSliderParameterAttachment> loCutAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> masterOutputAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> bypassSaturationAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> bypassDelayAttachment;
