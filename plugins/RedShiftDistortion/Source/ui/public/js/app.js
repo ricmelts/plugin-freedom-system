@@ -24,19 +24,33 @@ const paramConfigs = {
         unit: '%',
         decimals: 1
     },
-    hiCut: {
+    filterBandHigh: {
         type: 'slider',
-        min: 2000.0,
-        max: 10000.0,
+        min: 20.0,
+        max: 20000.0,
         unit: 'Hz',
         decimals: 0
     },
-    loCut: {
+    filterBandLow: {
         type: 'slider',
-        min: 50.0,
-        max: 1000.0,
+        min: 20.0,
+        max: 20000.0,
         unit: 'Hz',
         decimals: 0
+    },
+    lfoRate: {
+        type: 'slider',
+        min: 0.1,
+        max: 10.0,
+        unit: 'Hz',
+        decimals: 1
+    },
+    distortionLevel: {
+        type: 'slider',
+        min: -60.0,
+        max: 0.0,
+        unit: 'dB',
+        decimals: 1
     },
     masterOutput: {
         type: 'slider',
@@ -45,10 +59,16 @@ const paramConfigs = {
         unit: 'dB',
         decimals: 1
     },
+    reverse: {
+        type: 'toggle'
+    },
     bypassSaturation: {
         type: 'toggle'
     },
     bypassDoppler: {
+        type: 'toggle'
+    },
+    lfoTempoSync: {
         type: 'toggle'
     }
 };
