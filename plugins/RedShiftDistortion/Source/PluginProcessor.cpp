@@ -215,6 +215,13 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     const float leftDelaySamples = d0Samples + deltaDelaySamples;
     const float rightDelaySamples = d0Samples - deltaDelaySamples;
 
+    // Set delay amounts ONCE per buffer (not per sample!)
+    if (!bypassDoppler)
+    {
+        delayLineLeft.setDelay(leftDelaySamples);
+        delayLineRight.setDelay(rightDelaySamples);
+    }
+
     // Process each sample through the series chain
     for (int sample = 0; sample < numSamples; ++sample)
     {
@@ -232,9 +239,6 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
             rightIn += feedbackBuffer.getSample(1, sample) * feedbackGain;
 
             // Apply psychoacoustic doppler delay (fractional delay with linear interpolation)
-            delayLineLeft.setDelay(leftDelaySamples);
-            delayLineRight.setDelay(rightDelaySamples);
-
             leftIn = delayLineLeft.popSample(0, leftIn);
             rightIn = delayLineRight.popSample(0, rightIn);
 
