@@ -103,13 +103,17 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
     spec.numChannels = 2;  // Stereo only
 
-    // Prepare stereo delay lines (only need ~1ms for base Doppler delay)
+    // Prepare mono delay lines (one for left, one for right)
     const int maxDelaySamples = static_cast<int>(sampleRate * 0.01);  // 10ms max
     delayLineLeft.setMaximumDelayInSamples(maxDelaySamples);
     delayLineRight.setMaximumDelayInSamples(maxDelaySamples);
 
-    delayLineLeft.prepare(spec);
-    delayLineRight.prepare(spec);
+    // Each delay line is mono (1 channel)
+    juce::dsp::ProcessSpec monoSpec = spec;
+    monoSpec.numChannels = 1;
+
+    delayLineLeft.prepare(monoSpec);
+    delayLineRight.prepare(monoSpec);
     delayLineLeft.reset();
     delayLineRight.reset();
 
