@@ -58,20 +58,22 @@ public:
     {
         float output = 0.0f;
 
-        // Always write to fill buffer
-        fillBuffer->setSample(channel, fillPos, input);
+        // Always write to fill buffer (with bounds checking)
+        int writePos = fillPos % grainSize;  // Wrap fillPos to prevent overflow
+        fillBuffer->setSample(channel, writePos, input);
 
         switch (state)
         {
             case State::FILLING:
             {
-                // Accumulation phase - output silence or last sample
-                output = (playPos > 0) ? playBuffer->getSample(channel, playPos) : 0.0f;
+                // Accumulation phase - output silence (first grain) or last sample (subsequent)
+                output = 0.0f;  // Output silence during accumulation
 
                 fillPos++;
                 if (fillPos >= grainSize)
                 {
-                    // Grain full - switch to playback
+                    // Grain full - SWAP BUFFERS then switch to playback
+                    std::swap(fillBuffer, playBuffer);  // ← FIX: Swap so we play what we just filled
                     state = State::PLAYING;
                     playPos = grainSize - 1;  // Start reading from end
                     fillPos = 0;  // Reset fill position for next grain
@@ -85,11 +87,12 @@ public:
                 float window = hannWindow[static_cast<size_t>(playPos)];
                 output = playBuffer->getSample(channel, playPos) * window;
 
-                fillPos++;
+                fillPos++;  // Continue filling next grain in background
                 playPos--;
 
                 // Check if we need to start crossfading
-                if (playPos < crossfadeLength && fillPos >= grainSize - crossfadeLength)
+                int fillProgress = fillPos % grainSize;  // Wrap to prevent overflow
+                if (playPos < crossfadeLength && fillProgress >= grainSize - crossfadeLength)
                 {
                     state = State::CROSSFADING;
                     crossfadePos = 0;
@@ -97,7 +100,7 @@ public:
                 // Or if playback finished without crossfade
                 else if (playPos < 0)
                 {
-                    // Swap buffers
+                    // Swap buffers and start filling next grain
                     std::swap(fillBuffer, playBuffer);
                     state = State::FILLING;
                     fillPos = 0;
@@ -123,7 +126,7 @@ public:
 
                 output = oldSample * (1.0f - crossfade) + newSample * crossfade;
 
-                fillPos++;
+                fillPos++;  // Continue filling (will wrap on next write)
                 playPos--;
                 crossfadePos++;
 
@@ -133,7 +136,7 @@ public:
                     std::swap(fillBuffer, playBuffer);
                     state = State::PLAYING;
                     playPos = grainSize - 1 - crossfadeLength;  // Continue from crossfade end
-                    fillPos = 0;
+                    fillPos = 0;  // Reset for next grain
                 }
                 break;
             }
