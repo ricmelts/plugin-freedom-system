@@ -53,6 +53,15 @@ private:
     float smoothedStereoControl = 0.0f;
     float stereoSmoothingCoeff = 0.0f;  // Calculated in prepareToPlay
 
+    // Filter parameter smoothing (Phase 2.5 - prevents clicks on filter changes)
+    float smoothedFilterLow = 100.0f;
+    float smoothedFilterHigh = 8000.0f;
+    float filterSmoothingCoeff = 0.0f;  // Calculated in prepareToPlay
+
+    // Previous filter values for conditional updates (Phase 2.5 - optimization)
+    float prevFilterLow = -1.0f;
+    float prevFilterHigh = -1.0f;
+
     // Feedback filters (Stage 2 - feedback path, Phase 2.4)
     using IIRFilter = juce::dsp::IIR::Filter<float>;
 

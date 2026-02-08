@@ -150,6 +150,10 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     const float smoothingTimeMs = 10.0f;
     stereoSmoothingCoeff = 1.0f - std::exp(-1.0f / (smoothingTimeMs * 0.001f * static_cast<float>(sampleRate)));
 
+    // Calculate filter smoothing coefficient (100ms time constant - Phase 2.5)
+    const float filterSmoothingTimeMs = 100.0f;
+    filterSmoothingCoeff = 1.0f - std::exp(-1.0f / (filterSmoothingTimeMs * 0.001f * static_cast<float>(sampleRate)));
+
     // Calculate maximum delay in samples
     const int maxStereoWidthDelaySamples = static_cast<int>(std::ceil((ITD_HALF_MS / 1000.0f) * sampleRate));
     const int maxTapeDelaySamples = static_cast<int>(std::ceil((MAX_DELAY_MS / 1000.0f) * sampleRate));
@@ -255,8 +259,8 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     // Calculate target stereo control (-1.0 to +1.0)
     const float targetStereoControl = bypassStereoWidth ? 0.0f : (stereoWidthParam / 100.0f);
 
-    // Calculate feedback gain (0-95% → 0.0-0.95)
-    const float feedbackGain = feedbackParam / 100.0f;
+    // Calculate feedback gain (0-95% → 0.0-0.95, clamped to 0.95 max for stability - Phase 2.5)
+    const float feedbackGain = juce::jlimit(0.0f, 0.95f, feedbackParam / 100.0f);
 
     // Calculate saturation gain (dB to linear, Phase 2.4)
     const float saturationGain = std::pow(10.0f, saturationDb / 20.0f);
@@ -264,11 +268,31 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     // Calculate master output gain (dB to linear)
     const float masterGain = std::pow(10.0f, masterOutputDb / 20.0f);
 
-    // Update filter coefficients (Phase 2.4 - once per buffer to save CPU)
-    *feedbackLoCutFilterLeft.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass(currentSampleRate, filterBandLow);
-    *feedbackLoCutFilterRight.coefficients = *feedbackLoCutFilterLeft.coefficients;
-    *feedbackHiCutFilterLeft.coefficients = *juce::dsp::IIR::Coefficients<float>::makeLowPass(currentSampleRate, filterBandHigh);
-    *feedbackHiCutFilterRight.coefficients = *feedbackHiCutFilterLeft.coefficients;
+    // OPTIMIZATION: Early exit if everything bypassed (Phase 2.5)
+    if (bypassStereoWidth && bypassDelay)
+    {
+        // Only apply master output gain
+        buffer.applyGain(masterGain);
+        return;
+    }
+
+    // Smooth filter frequencies (prevents clicks on parameter changes - Phase 2.5)
+    smoothedFilterLow += (filterBandLow - smoothedFilterLow) * filterSmoothingCoeff;
+    smoothedFilterHigh += (filterBandHigh - smoothedFilterHigh) * filterSmoothingCoeff;
+
+    // Update filter coefficients only when changed (Phase 2.5 - optimization)
+    if (std::abs(smoothedFilterLow - prevFilterLow) > 0.1f ||
+        std::abs(smoothedFilterHigh - prevFilterHigh) > 0.1f)
+    {
+        // Update filter coefficients with smoothed values
+        *feedbackLoCutFilterLeft.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass(currentSampleRate, smoothedFilterLow);
+        *feedbackLoCutFilterRight.coefficients = *feedbackLoCutFilterLeft.coefficients;
+        *feedbackHiCutFilterLeft.coefficients = *juce::dsp::IIR::Coefficients<float>::makeLowPass(currentSampleRate, smoothedFilterHigh);
+        *feedbackHiCutFilterRight.coefficients = *feedbackHiCutFilterLeft.coefficients;
+
+        prevFilterLow = smoothedFilterLow;
+        prevFilterHigh = smoothedFilterHigh;
+    }
 
     // Get sample rate for delay time calculations
     const float sampleRate = static_cast<float>(getSampleRate());
@@ -282,8 +306,11 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     const int grainOverlap = (grainOverlapIndex == 0) ? 2 : 4;  // 2x or 4x
     const int grainAdvanceSamples = grainSizeSamples / grainOverlap;
 
-    // Clamp grain size to maximum
-    const int actualGrainSize = std::min(grainSizeSamples, static_cast<int>(GrainEngine::MAX_GRAIN_SIZE_SAMPLES));
+    // Clamp grain size to maximum (Phase 2.5 - safety check)
+    const int actualGrainSize = juce::jlimit(1, static_cast<int>(GrainEngine::MAX_GRAIN_SIZE_SAMPLES), grainSizeSamples);
+
+    // OPTIMIZATION: Should we process granular? (Phase 2.5)
+    const bool shouldProcessGranular = !bypassDoppler && std::abs(pitchRatio - 1.0f) > 0.001f;
 
     // Process each sample
     for (int sample = 0; sample < numSamples; ++sample)
@@ -330,7 +357,8 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
                 float delayedSignal = tapeDelay.popSample(ch);
 
                 // STAGE 3: Granular Pitch Shifter (INSIDE FEEDBACK LOOP - CUMULATIVE)
-                if (!bypassDoppler && std::abs(pitchRatio - 1.0f) > 0.001f)
+                // OPTIMIZATION: Skip granular when pitch ratio ≈ 1.0 OR bypassed (Phase 2.5)
+                if (shouldProcessGranular)
                 {
                     auto& engine = grainEngines[ch];
 
