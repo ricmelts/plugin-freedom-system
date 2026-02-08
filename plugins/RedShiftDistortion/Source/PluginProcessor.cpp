@@ -32,31 +32,22 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         "%"
     ));
 
-    // hiCut - Float (2000.0 to 10000.0 Hz) for tape delay feedback filtering
+    // hiCut - Float (2000.0 to 50000.0 Hz) for tape delay feedback filtering (lowpass)
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "hiCut", 1 },
         "Hi Cut",
-        juce::NormalisableRange<float>(2000.0f, 10000.0f, 10.0f),
+        juce::NormalisableRange<float>(2000.0f, 50000.0f, 10.0f),
         8000.0f,
         "Hz"
     ));
 
-    // loCut - Float (50.0 to 1000.0 Hz) for tape delay feedback filtering
+    // loCut - Float (50.0 to 1000.0 Hz) for tape delay feedback filtering (highpass)
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "loCut", 1 },
         "Lo Cut",
         juce::NormalisableRange<float>(50.0f, 1000.0f, 1.0f),
         100.0f,
         "Hz"
-    ));
-
-    // distortionLevel - Float (-60.0 to 0.0 dB)
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "distortionLevel", 1 },
-        "Distortion Level",
-        juce::NormalisableRange<float>(-60.0f, 0.0f, 0.1f),
-        -6.0f,
-        "dB"
     ));
 
     // masterOutput - Float (-60.0 to 12.0 dB)

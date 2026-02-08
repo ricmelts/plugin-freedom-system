@@ -27,7 +27,7 @@ const paramConfigs = {
     hiCut: {
         type: 'slider',
         min: 2000.0,
-        max: 10000.0,
+        max: 50000.0,
         unit: 'Hz',
         decimals: 0
     },
