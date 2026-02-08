@@ -50,6 +50,38 @@ private:
     float smoothedStereoControl = 0.0f;
     float stereoSmoothingCoeff = 0.0f;  // Calculated in prepareToPlay
 
+    // Stage 3: Granular Pitch Shifter (Phase 2.2 - isolated testing)
+    struct GrainEngine
+    {
+        static constexpr int MAX_GRAIN_SIZE_SAMPLES = 9600;  // 200ms at 48kHz
+        static constexpr int MAX_GRAINS = 4;  // 4x overlap maximum
+
+        // Grain buffer (circular buffer for grain playback)
+        std::array<float, MAX_GRAIN_SIZE_SAMPLES> grainBuffer;
+        int grainBufferWritePos = 0;
+
+        // Hann window lookup table (pre-calculated in prepareToPlay)
+        std::array<float, MAX_GRAIN_SIZE_SAMPLES> hannWindow;
+
+        // Active grains (each grain has independent playback position)
+        struct Grain
+        {
+            float readPosition = 0.0f;  // Fractional sample position
+            int grainPhase = 0;         // Current phase (0 to grainSize-1)
+            bool active = false;
+        };
+        std::array<Grain, MAX_GRAINS> grains;
+
+        // Grain spawning
+        int samplesUntilNextGrain = 0;
+        int grainAdvanceSamples = 0;  // Calculated from grainSize / grainOverlap
+    };
+
+    std::array<GrainEngine, 2> grainEngines;  // Separate engine per channel
+
+    // Granular parameters (cached from APVTS)
+    float currentSampleRate = 48000.0f;
+
     // Constants (from architecture.md)
     static constexpr float ITD_HALF_MS = 260.0f;  // Maximum L/R differential (ms)
     static constexpr float MAX_DELAY_MS = 300.0f;  // Maximum tape delay (ms)
