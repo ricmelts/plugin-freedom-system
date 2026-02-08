@@ -1,8 +1,9 @@
 # RedShiftDistortion - Implementation Plan
 
 **Date:** 2026-02-05
-**Complexity Score:** 5.0 (Complex - Maximum Complexity)
-**Strategy:** Phase-based implementation with incremental testing
+**Revised:** 2026-02-08 (Final - Granular Doppler + Cumulative Feedback)
+**Complexity Score:** 5.0 (Maximum Complexity)
+**Strategy:** Phase-based implementation with isolated granular engine testing
 
 ---
 
@@ -10,236 +11,275 @@
 
 ### Calculation Breakdown
 
-- **Parameters:** 8 parameters (8/5 = 1.6 points, capped at 2.0) = **1.6**
-  - saturation, dopplerShift, pitchEnable, delayTime, tempoSync, delayLevel, distortionLevel, masterOutput
+- **Parameters:** 15 parameters (15/5 = 3.0 points, capped at 2.0) = **2.0**
+  - stereoWidth, feedback, filterBandLow, filterBandHigh, dopplerShift, saturation, masterOutput, bypassStereoWidth, bypassDelay, bypassDoppler, bypassSaturation, grainSize, grainOverlap
 
 - **Algorithms:** 4 DSP components = **4.0**
+  - Stereo Width (differential L/R delays)
+  - Tape Delay (feedback loop with filtering)
+  - Granular Pitch Shifter (overlap-add synthesis with variable-rate playback) ← HIGHEST COMPLEXITY
   - Tube Saturation (tanh waveshaping)
-  - Delay Line (juce::dsp::DelayLine with tempo sync)
-  - Granular Pitch Shifter (custom 4-grain implementation)
-  - Parallel Signal Routing (independent processing paths)
 
 - **Features:** 2 complexity features = **2.0**
-  - Granular synthesis (+1) - Complex grain buffer management, overlap-add, windowing
-  - Modulation system (+1) - LFO-driven delay time modulation for doppler simulation
+  - Granular synthesis (+1) - Grain buffer management, overlap-add, windowing, pitch-shifted playback
+  - Cumulative feedback effects (+1) - Doppler + saturation compound with each repeat
 
-- **Total:** 1.6 + 4.0 + 2.0 = **7.6** → **Capped at 5.0**
+- **Total:** 2.0 + 4.0 + 2.0 = **8.0** → **Capped at 5.0**
 
-**Complexity Tier:** 5 (Highest - granular synthesis with parallel routing)
+**Complexity Tier:** 5 (Maximum - granular pitch shifting with cumulative feedback)
+
+**Complexity rationale:**
+- Granular pitch shifting is algorithmically complex (grain management, overlap-add, variable-rate playback)
+- Cumulative feedback behavior adds risk (pitch shifts compound exponentially)
+- No existing JUCE granular class (custom implementation required)
+- Moderate to high CPU usage (~37-57% single core depending on grain settings)
 
 ---
 
 ## Stages
 
-- ✓ Stage 0: Research & Planning (Complete)
+- ✓ Stage 0: Research & Planning (Complete - Finalized 2026-02-08)
 - → Stage 1: Foundation + Shell (Next - Build system + APVTS parameters)
-- ⏳ Stage 2: DSP (3 phases - Core → Modulation → Advanced)
-- ⏳ Stage 3: GUI (3 phases - Layout → Binding → Advanced)
+- ⏳ Stage 2: DSP (5 phases - Stereo Width → Granular Engine → Integration → Saturation → Polish)
+- ⏳ Stage 3: GUI (Update UI for 15 parameters with advanced settings panel)
 - ⏳ Stage 4: Validation (Presets, pluginval, changelog)
 
 ---
 
-## Complex Implementation (Score = 5.0)
+## Maximum Implementation (Score = 5.0)
 
-### Stage 2: DSP Implementation (3 Phases)
+### Stage 2: DSP Implementation (5 Phases)
 
-#### Phase 2.1: Core Processing & Parallel Routing
+#### Phase 2.1: Stereo Width + Basic Delay (No Feedback)
 
-**Goal:** Establish basic signal flow with parallel paths and simple distortion/delay
+**Goal:** Establish series signal flow with stereo width modulation and basic delay
 
 **Components:**
-- Parallel signal router (split input to two paths)
-- Tube saturation engine (tanh waveshaping)
-- Basic delay line (fixed time, no tempo sync yet)
-- Output mixer (3-stage level control: delay, distortion, master)
-- Signal flow validation (both paths process independently)
+- Stereo width modulation (differential L/R delay times with exponential smoothing)
+- Basic delay line (no feedback yet, just pass-through)
+- Master output gain
+- Bypass controls (bypassStereoWidth, bypassDelay placeholders)
 
 **Test Criteria:**
 - [ ] Plugin loads in DAW without crashes
-- [ ] Audio passes through both parallel paths
-- [ ] saturation parameter affects distortion path (audible warmth at +12dB)
-- [ ] delayTime parameter affects delay path (basic fixed delay 0-16000ms)
-- [ ] delayLevel scales delay path volume (-60dB to 0dB)
-- [ ] distortionLevel scales distortion path volume (-60dB to 0dB)
-- [ ] masterOutput scales final mixed output (-60dB to +12dB)
+- [ ] Audio passes through series chain (stereo width → delay → output)
+- [ ] stereoWidth parameter creates spatial positioning (±260ms L/R differential)
+  - Negative values = narrow stereo
+  - Zero = mono
+  - Positive values = wide stereo
+- [ ] bypassStereoWidth bypasses stereo width modulation (mono output)
+- [ ] bypassDelay bypasses delay line entirely
+- [ ] masterOutput scales final output level (-60dB to +12dB)
 - [ ] No clicks, pops, or artifacts at extreme parameter values
 - [ ] Both stereo channels process correctly
-
-**Duration:** 1-2 days
-
----
-
-#### Phase 2.2: Tempo Sync & Delay Modulation
-
-**Goal:** Add host tempo synchronization and doppler simulation via delay time modulation
-
-**Components:**
-- Tempo sync system (BPM query from host via AudioPlayHead)
-- Note division quantization (1/16 to 8 bars)
-- Delay time modulator (LFO-driven delay time variation)
-- tempoSync parameter toggle (musical vs free time)
-- Smooth parameter transitions (prevent clicks on tempo/sync changes)
-
-**Test Criteria:**
-- [ ] tempoSync parameter switches between musical (bars) and free time (ms) modes
-- [ ] Delay time quantizes to nearest note division when tempo sync ON
-- [ ] Host BPM changes update delay time correctly (test tempo automation)
-- [ ] Fallback to 120 BPM when host doesn't provide tempo
-- [ ] dopplerShift parameter modulates delay time (0-10% variation based on ±50% range)
-- [ ] LFO modulation creates audible pitch artifacts (doppler effect)
-- [ ] No clicks when switching tempoSync on/off
-- [ ] Delay time updates smoothly during tempo changes
+- [ ] Exponential smoothing prevents clicks on stereoWidth changes
 
 **Duration:** 1 day
 
 ---
 
-#### Phase 2.3: Granular Pitch Shifting (Advanced Feature)
+#### Phase 2.2: Granular Pitch Shifter (Isolated Testing)
 
-**Goal:** Implement granular synthesis engine for pitch shifting and time stretching
+**Goal:** Implement granular synthesis engine in isolation before feedback integration
 
 **Components:**
-- Granular synthesis engine (4-grain overlap, Hann window)
-- Grain buffer management (100ms grain size at 48kHz)
-- Pitch-shifted grain playback (variable-rate resampling)
-- Time stretching mode (pitchEnable parameter toggle)
-- Overlap-add synthesis (4 simultaneous grains)
-- Integration with delay path (pitch shift applied to delayed signal)
+- Grain buffer management (circular buffer, pre-allocated)
+- Hann window generation (pre-calculated lookup table)
+- Grain spawning and overlap tracking (4-grain or 2-grain overlap)
+- Variable-rate grain playback (pitch-shifted resampling)
+- Overlap-add synthesis (sum of windowed grains)
+- Advanced parameters (grainSize, grainOverlap)
 
 **Test Criteria:**
-- [ ] dopplerShift parameter shifts pitch up/down (±1 octave / ±12 semitones)
-- [ ] Positive doppler (+50%) → pitch down ~1 octave (red shift)
-- [ ] Negative doppler (-50%) → pitch up ~1 octave (blue shift)
-- [ ] pitchEnable ON → pitch + time change together (natural doppler)
-- [ ] pitchEnable OFF → time stretch only (speed changes, no pitch shift)
-- [ ] Grain boundaries smooth (no clicks or graininess at moderate settings)
-- [ ] Acceptable artifacts at extreme settings (±50% doppler)
-- [ ] CPU usage within budget (~30-40% single core at 48kHz)
+- [ ] Granular engine compiles without errors
+- [ ] dopplerShift parameter shifts pitch accurately (±12 semitones / ±1 octave)
+  - -50% doppler → pitch down one octave (0.5x pitch ratio)
+  - 0% doppler → no pitch shift (1.0x pitch ratio)
+  - +50% doppler → pitch up one octave (2.0x pitch ratio)
+- [ ] Pitch shift accuracy verified with tone generator (440 Hz → 880 Hz at +50% doppler)
+- [ ] Grain boundaries smooth (no clicks or pops)
+- [ ] grainSize parameter adjusts grain buffer size (25-200ms)
+- [ ] grainOverlap parameter switches between 2x and 4x overlap
+- [ ] 4x overlap smoother than 2x overlap (subjective quality test)
+- [ ] 2x overlap uses ~50% CPU of 4x overlap
+- [ ] No artifacts at moderate grain settings (100ms, 4x overlap)
+- [ ] Acceptable artifacts at extreme settings (25ms grain size may have slight graininess)
+- [ ] CPU usage within budget (~20-40% single core depending on settings)
 - [ ] No memory leaks or buffer overflows
-- [ ] Stereo processing maintains channel independence
+- [ ] Stereo processing works correctly (independent L/R grain tracking)
 
-**Duration:** 3-5 days (highest complexity phase)
+**Duration:** 3-5 days ⚠️ HIGHEST RISK
 
 **Risk Mitigation:**
-- Start with 2-grain overlap if CPU too high (trade quality for performance)
-- Tune grain size (50-100ms range) to minimize artifacts
-- Profile CPU early and optimize if >50% single core
-- Reference granular synthesis examples (JUCE forum, Curtis Roads literature)
+- Implement grain engine in separate test harness first
+- Unit test pitch accuracy with known frequencies
+- Profile CPU usage early (optimize if >50% single core)
+- Reference Curtis Roads granular synthesis literature
+- Start with 2-grain overlap (simpler), scale to 4-grain if CPU allows
+- Make grain settings user-adjustable (allows post-release tuning)
 
 ---
 
-### Stage 3: GUI Implementation (3 Phases)
+#### Phase 2.3: Integrate Granular into Feedback Loop
 
-#### Phase 3.1: Layout and Basic Controls
-
-**Goal:** Integrate WebView mockup HTML and bind primary parameters
+**Goal:** Add granular pitch shifter to feedback path and test cumulative behavior
 
 **Components:**
-- Copy v[N]-ui.html mockup to Source/ui/public/index.html
-- Update PluginEditor.h/cpp with WebView setup
-- Configure CMakeLists.txt for WebView resources (NEEDS_WEB_BROWSER TRUE)
-- Create resource provider (getResource() with explicit URL mapping)
-- Bind primary parameters via WebSliderRelay system:
-  - saturation knob
-  - dopplerShift knob
-  - delayTime knob/selector
-  - delayLevel, distortionLevel, masterOutput knobs
-  - tempoSync toggle
-  - pitchEnable toggle
+- Feedback loop structure (delayed signal fed back to input)
+- Granular pitch shifter in feedback path
+- Feedback gain control (0-95%)
+- bypassDoppler control
 
 **Test Criteria:**
-- [ ] WebView window opens with correct size (match mockup dimensions)
-- [ ] All knobs render with holographic/3D aesthetic
-- [ ] Background styling matches mockup design
-- [ ] Layout matches creative brief vision (central saturation, prominent doppler)
-- [ ] VU meter placeholder visible (static, no animation yet)
-- [ ] All controls visible and clickable
+- [ ] Feedback loop creates repeating delays
+- [ ] Granular pitch shifter processes each feedback repeat
+- [ ] **CUMULATIVE behavior verified:**
+  - Repeat 1: +1 octave (at +50% doppler)
+  - Repeat 2: +2 octaves
+  - Repeat 3: +3 octaves
+  - Eventually shifts out of audible range (natural decay)
+- [ ] Negative doppler creates descending pitch shifts (red shift)
+- [ ] Positive doppler creates ascending pitch shifts (blue shift)
+- [ ] bypassDoppler bypasses pitch shifting (keeps delay, skips granular processing)
+- [ ] Feedback loop is stable (no runaway oscillation at 95% feedback)
+- [ ] High feedback + high doppler creates rapid pitch escalation (expected behavior)
+- [ ] CPU usage acceptable with feedback (~30-50% single core)
 
-**Duration:** 1-2 days
+**Duration:** 1 day
+
+**Risk Mitigation:**
+- Test cumulative behavior with tone generator (measure pitch of each repeat)
+- Document expected cumulative escalation (not a bug, it's a feature)
+- Test stability at extreme settings (feedback=95%, doppler=+50%)
 
 ---
 
-#### Phase 3.2: Parameter Binding and Interaction
+#### Phase 2.4: Saturation + Filters in Feedback
 
-**Goal:** Two-way parameter communication (UI ↔ DSP)
+**Goal:** Add saturation and dual-band filtering to feedback path
 
 **Components:**
-- JavaScript → C++ relay calls (knob drag updates DSP parameters)
-- C++ → JavaScript parameter updates (host automation updates UI)
-- Value formatting and display (dB for levels, % for doppler, note divisions for tempo sync)
-- Real-time parameter updates during playback
-- Relative knob drag (frame-delta pattern, NOT absolute positioning)
-- Parameter smoothing (prevent audible zipper noise)
+- Tube saturation (tanh waveshaping AFTER granular pitch shifter)
+- Hi-cut filter (lowpass) in feedback path
+- Lo-cut filter (highpass) in feedback path
+- bypassSaturation control
 
 **Test Criteria:**
+- [ ] saturation parameter affects pitch-shifted delayed signal (cumulative warmth)
+- [ ] Saturation builds with each repeat (cumulative behavior)
+- [ ] filterBandHigh (hi-cut lowpass) removes high frequencies from feedback
+- [ ] filterBandLow (lo-cut highpass) removes low frequencies from feedback
+- [ ] Filters create authentic tape echo frequency response (rolloff with repeats)
+- [ ] bypassSaturation bypasses saturation stage (linear passthrough)
+- [ ] High feedback + high saturation + high doppler doesn't cause harsh artifacts
+- [ ] No DC offset from saturation (verify with spectrum analyzer)
+- [ ] Cumulative saturation + pitch shift creates expected tonal character
+- [ ] CPU usage within budget (~37-57% single core total)
+
+**Duration:** 1 day
+
+**Risk Mitigation:**
+- Test with extreme settings (feedback=95%, saturation=+24dB, doppler=+50%)
+- Verify no runaway oscillation or DC offset
+- Add soft clipper after saturation if needed (safety limiter)
+- Reference RE-201 Space Echo for expected cumulative saturation behavior
+
+---
+
+#### Phase 2.5: Polish and Optimization
+
+**Goal:** Tune grain parameters, optimize CPU, reduce artifacts
+
+**Components:**
+- Grain parameter tuning (find optimal defaults for quality/CPU balance)
+- CPU profiling and optimization
+- Artifact reduction (tune grain size and overlap)
+- Bypass optimization (skip unnecessary processing when bypassed)
+
+**Test Criteria:**
+- [ ] Default grain settings (100ms, 4x overlap) sound smooth
+- [ ] 2x overlap mode provides acceptable quality with lower CPU
+- [ ] CPU usage profiled and optimized (<50% single core at 48kHz)
+- [ ] Bypasses skip unnecessary processing (CPU savings when bypassed)
+- [ ] Artifacts minimized at default settings
+- [ ] Extreme grain settings documented (25ms may have graininess, expected)
+- [ ] No memory leaks after extended use
+- [ ] Plugin stable with rapid parameter automation
+
+**Duration:** 0.5-1 day
+
+---
+
+### Stage 3: GUI Implementation
+
+#### GUI Update: 15 Parameters with Advanced Settings Panel
+
+**Goal:** Update WebView UI to match new 15-parameter set with collapsible advanced panel
+
+**Components:**
+- Main controls section (stereoWidth, feedback, filters, dopplerShift, saturation, masterOutput)
+- Bypass controls section (bypassStereoWidth, bypassDelay, bypassDoppler, bypassSaturation)
+- Advanced settings panel (grainSize, grainOverlap) - collapsible
+- Update PluginEditor.h/cpp bindings for 15 parameters
+- Update index.html for new parameter set
+- Verify WebSliderRelay and WebToggleButtonRelay for all parameters
+- Value formatting (dB for saturation/masterOutput, % for stereoWidth/dopplerShift/feedback, Hz for filters, ms for grainSize)
+
+**Test Criteria:**
+- [ ] WebView window opens with correct size
+- [ ] All 15 parameter controls render correctly
+- [ ] Main controls section displays 7 main parameters
+- [ ] Bypass controls section displays 4 bypass toggles
+- [ ] Advanced settings panel displays 2 grain quality controls
+- [ ] Advanced panel can be collapsed/expanded
 - [ ] Knob drag changes DSP parameters (audible effect)
 - [ ] Host automation updates UI knobs (visual feedback)
 - [ ] Preset changes update all UI elements simultaneously
-- [ ] Parameter values display correctly (formatted strings)
-- [ ] No lag or visual glitches during rapid parameter changes
-- [ ] Knobs use relative drag (not absolute cursor positioning)
-- [ ] Toggle switches reflect state correctly (tempoSync, pitchEnable)
-- [ ] No frozen knobs (verify WebSliderParameterAttachment has 3rd parameter: nullptr)
+- [ ] Parameter values display correctly (formatted strings with units)
+- [ ] Toggle switches reflect state correctly (bypasses)
+- [ ] grainOverlap displays as "2x" or "4x" (not 2.0 or 4.0)
+- [ ] No frozen knobs or binding issues
+- [ ] No references to deleted parameters (lfoRate, lfoDepth, lfoTempoSync)
 
-**Duration:** 1-2 days
+**Duration:** 1 day
 
 **Critical Patterns:**
-- Use `getSliderState()` for continuous parameters (saturation, doppler, levels)
-- Use `getToggleState()` for boolean parameters (tempoSync, pitchEnable)
-- Verify `type="module"` on script tags (ES6 module loading)
-- Use relative drag pattern (lastY, NOT startY) for knobs
-- WebSliderParameterAttachment constructor requires 3 params in JUCE 8: (parameter, relay, nullptr)
-
----
-
-#### Phase 3.3: VU Meter Animation (Advanced UI)
-
-**Goal:** Implement holographic VU meter with ballistic motion
-
-**Components:**
-- VU meter level calculation (dual-path metering: delay + distortion)
-- C++ → JavaScript level updates (60Hz update rate)
-- JavaScript requestAnimationFrame loop (ballistic motion: fast attack, slow decay)
-- Visual styling (holographic glow, color zones: green/yellow/red)
-- Needle rotation based on dB level (map -60dB to 0dB → -45° to +45°)
-
-**Test Criteria:**
-- [ ] VU meter needle responds to audio level (both delay and distortion paths)
-- [ ] Needle has ballistic motion (fast attack ~0.4 speed, slow decay ~0.15 speed)
-- [ ] Needle rotation smooth (no jitter or stutter)
-- [ ] Color zones change based on level (green <75%, yellow 75-90%, red >90%)
-- [ ] Holographic glow effect renders correctly
-- [ ] VU meter updates at ~60fps (no UI thread starvation)
-- [ ] Level calculation doesn't affect DSP performance (<5% CPU)
-
-**Duration:** 1-2 days
+- Use `getSliderState()` for continuous parameters (stereoWidth, feedback, filters, dopplerShift, saturation, grainSize, masterOutput)
+- Use `getToggleState()` for boolean parameters (bypassStereoWidth, bypassDelay, bypassDoppler, bypassSaturation)
+- grainOverlap is choice parameter (2x or 4x, may need custom handling)
+- WebSliderParameterAttachment requires 3 params in JUCE 8: (parameter, relay, nullptr)
+- Verify all deleted parameters removed from PluginEditor constructor
 
 ---
 
 ### Implementation Flow Summary
 
 ```
-✓ Stage 0: Research & Planning (Complete)
-  - architecture.md created (DSP specification)
-  - plan.md created (implementation strategy)
+✓ Stage 0: Research & Planning (Complete - Finalized 2026-02-08)
+  - architecture.md finalized (granular doppler + cumulative feedback)
+  - creative-brief.md finalized (separated stereo width + doppler)
+  - plan.md finalized (5-phase implementation)
 
 → Stage 1: Foundation + Shell
+  - Update parameter definitions (15 parameters)
   - Build system (CMakeLists.txt, JUCE configuration)
-  - APVTS parameter definitions (8 parameters)
+  - APVTS parameter layout
   - Placeholder PluginProcessor/PluginEditor
 
-⏳ Stage 2: DSP (3 phases, ~5-8 days)
-  - Phase 2.1: Core Processing & Parallel Routing (1-2 days)
-  - Phase 2.2: Tempo Sync & Delay Modulation (1 day)
-  - Phase 2.3: Granular Pitch Shifting (3-5 days) ← HIGHEST RISK
+⏳ Stage 2: DSP (5 phases, ~6-9 days)
+  - Phase 2.1: Stereo Width + Basic Delay (1 day)
+  - Phase 2.2: Granular Pitch Shifter (3-5 days) ← HIGHEST RISK
+  - Phase 2.3: Integrate Granular into Feedback (1 day)
+  - Phase 2.4: Saturation + Filters (1 day)
+  - Phase 2.5: Polish and Optimization (0.5-1 day)
 
-⏳ Stage 3: GUI (3 phases, ~3-6 days)
-  - Phase 3.1: Layout and Basic Controls (1-2 days)
-  - Phase 3.2: Parameter Binding and Interaction (1-2 days)
-  - Phase 3.3: VU Meter Animation (1-2 days)
+⏳ Stage 3: GUI (1 day)
+  - Update UI for 15 parameters
+  - Add advanced settings panel (collapsible)
+  - Update parameter bindings
 
 ⏳ Stage 4: Validation (~1 day)
-  - Preset creation (10 presets showcasing doppler effect ranges)
+  - Preset creation (10 presets showcasing cumulative doppler + stereo width)
   - pluginval testing (VST3, AU, Standalone)
   - Changelog generation
   - Build verification
@@ -252,87 +292,87 @@
 ### Thread Safety
 
 - All parameter reads use atomic `APVTS::getRawParameterValue()->load()` (real-time safe)
-- Granular grain buffers pre-allocated in prepareToPlay() (no audio thread allocations)
-- Delay line buffer sized for maximum delay at 192kHz (no reallocations)
-- No shared state between stereo channels (per-channel grain tracking)
-- Host tempo query via getPlayHead() is host-provided and real-time safe
-- VU meter level calculation uses lock-free atomic<float> for thread-safe updates
+- Delay line buffers pre-allocated in prepareToPlay (no allocations in audio thread)
+- Granular grain buffers pre-allocated in prepareToPlay (no reallocations)
+- Feedback buffer sized for maximum delay (300ms at 192kHz)
+- No shared state between channels (per-channel grain tracking)
+- Hann window pre-calculated in prepareToPlay (lookup table, no runtime calculation)
 
 ### Performance
 
 **Estimated CPU usage per component:**
-- Granular pitch shifter: ~25-30% single core (most expensive)
-  - 4-grain overlap with 100ms grain size
-  - Variable-rate grain playback (interpolation)
-- Delay line: ~5% (Lagrange3rd interpolation)
-- Tube saturation: ~3% (per-sample tanh)
-- Delay time modulator: ~2% (sine LFO calculation)
-- Parallel mixing: ~2% (addition + gain)
-- **Total estimated: ~37-42% single core @ 48kHz**
+- Stereo width: ~5% single core (two delay lines with exponential smoothing)
+- Tape delay: ~5% (delay line read/write + feedback mixing)
+- Granular pitch shifter: ~20-40% (depends on grainSize and grainOverlap)
+  - 4-grain overlap, 100ms grain: ~30% CPU
+  - 2-grain overlap, 100ms grain: ~15% CPU
+  - Larger grain sizes reduce CPU per grain
+- Saturation: ~3% (per-sample tanh in feedback loop)
+- Feedback filters: ~4% (dual IIR filters)
+- **Total estimated: ~37-57% single core @ 48kHz** (depends on grain settings)
 
-**Optimization opportunities if CPU exceeds budget:**
-- Reduce grain overlap to 2x (trade quality for 10-15% CPU savings)
-- Use linear interpolation instead of Lagrange3rd (trade smoothness for 2-3% CPU savings)
-- Apply saturation only if saturation > -10dB (bypass threshold saves ~2% CPU)
-- Update doppler modulation every 64 samples (not every sample, saves ~1% CPU)
+**Optimization opportunities:**
+- Use 2x grain overlap instead of 4x (saves ~15% CPU)
+- Larger grain size (150-200ms) reduces CPU per grain (trade latency for CPU)
+- Bypass granular when dopplerShift = 0% (skip unnecessary processing)
+- Update grain spawning less frequently (every N samples instead of every sample)
 
 ### Latency
 
-- Granular pitch shifter: ~10-20ms (grain size + overlap delay)
-- Delay line: 0-16000ms user-controlled (not counted as latency)
-- Tube saturation: 0ms (instantaneous waveshaping)
-- **Total plugin latency: ~10-20ms**
+- Stereo width: ~0-260ms (user-controlled, NOT counted as latency)
+- Tape delay: 0-300ms user-controlled (NOT counted as latency)
+- Granular pitch shifter: ~10-20ms inherent latency (grain size dependent)
+- Saturation: 0ms (instantaneous waveshaping)
+- **Total plugin latency: ~10-20ms** (granular grain size)
 - Report via `setLatencySamples()` for host compensation
-- Note: User-controlled delay time is NOT latency (it's an effect parameter)
 
 ### Denormal Protection
 
 - Use `juce::ScopedNoDenormals` in processBlock() (prevent CPU spikes)
 - All JUCE DSP components handle denormals internally
-- Granular LFO phase wrapping prevents denormals (explicit modulo at 2π)
+- Granular grain buffer wrapping prevents denormals (explicit modulo wrapping)
 - Delay line interpolation handles denormals (JUCE DelayLine internals)
 
 ### Known Challenges
 
-**Granular Synthesis Artifacts:**
-- **Challenge:** Graininess or metallic sound if grain size/overlap incorrect
-- **Mitigation:** Tune grain size (50-100ms range) and overlap (2x-4x) during Phase 2.3
-- **Reference:** Curtis Roads "Real-Time Granular Synthesis" for optimal parameters
+**Granular Pitch Shifting Complexity:**
+- **Challenge:** Most algorithmically complex component (grain management, overlap-add, variable-rate playback)
+- **Mitigation:** Implement in isolation first, unit test pitch accuracy, reference existing implementations
+- **Testing:** Verify pitch shift accuracy with tone generator (440 Hz → 880 Hz at +50% doppler)
 
-**Tempo Sync Edge Cases:**
-- **Challenge:** Some hosts don't provide BPM, or BPM changes mid-buffer
-- **Mitigation:** Fallback to 120 BPM, smooth delay time changes over 10ms
-- **Reference:** AngelGrain tempo sync implementation (lines 170-190)
+**Cumulative Pitch Shift Escalation:**
+- **Challenge:** High feedback + high doppler creates rapid pitch escalation (may shift out of audible range quickly)
+- **Mitigation:** Document expected behavior (this is intentional, not a bug), test with tone generator
+- **User control:** Users can reduce feedback or doppler for subtler effects
 
-**Parallel Path Mixing:**
-- **Challenge:** Summing two independent paths may cause clipping at extreme levels
-- **Mitigation:** Test with delayLevel=0dB + distortionLevel=0dB + loud input, add soft clipping if needed
-- **Reference:** FlutterVerb dry/wet mixer (similar parallel architecture)
+**Feedback Loop Stability:**
+- **Challenge:** Cumulative doppler + saturation in feedback may cause unexpected behavior
+- **Mitigation:** Clamp feedback to 0.95 max, test extreme settings, add soft clipper if needed
+- **Testing:** Verify stability at feedback=95%, saturation=+24dB, doppler=+50%
 
-**WebView Parameter Binding:**
-- **Challenge:** JUCE 8 requires 3 parameters for WebSliderParameterAttachment (not 2)
-- **Mitigation:** Always use (parameter, relay, nullptr) constructor
-- **Reference:** juce8-critical-patterns.md #12
+**CPU Usage:**
+- **Challenge:** Granular engine may use significant CPU (~20-40% depending on settings)
+- **Mitigation:** Make grain settings user-adjustable, start with 2-grain overlap, profile early
+- **Optimization:** Bypass optimizations, larger grain sizes, update grain spawning less frequently
 
-**VU Meter Thread Safety:**
-- **Challenge:** Audio thread updates VU level, UI thread reads it
-- **Mitigation:** Use std::atomic<float> for level value (lock-free)
-- **Reference:** FlutterVerb VU meter implementation
+**Artifact Management:**
+- **Challenge:** Small grain sizes (25-50ms) may have slight graininess
+- **Mitigation:** Default to 100ms grain size, document expected artifacts at extremes
+- **User control:** grainSize and grainOverlap exposed for quality tuning
 
 ---
 
 ## References
 
 ### Contract Files
-- Creative brief: `plugins/RedShiftDistortion/.ideas/creative-brief.md`
-- Parameter spec: `plugins/RedShiftDistortion/.ideas/parameter-spec-draft.md` (draft version)
-- DSP architecture: `plugins/RedShiftDistortion/.ideas/architecture.md`
-- UI mockup: `plugins/RedShiftDistortion/.ideas/mockups/v[N]-ui.yaml` (to be created)
+- Creative brief: `plugins/RedShiftDistortion/.ideas/creative-brief.md` (✓ FINALIZED)
+- DSP architecture: `plugins/RedShiftDistortion/.ideas/architecture.md` (✓ FINALIZED)
+- Continue-here: `plugins/RedShiftDistortion/.continue-here.md` (needs update)
 
 ### Reference Plugins
-- **AngelGrain** - Tempo sync implementation, grain playback reference
-- **FlutterVerb** - VU meter animation, parallel dry/wet mixing
-- **TapeAge** - Tube saturation waveshaping, WebView parameter binding
+- **FabFilter Timeless 3** - Granular pitch shifting, time stretching
+- **Eventide H3000** - Pitch shifting with feedback, cumulative effects
+- **TapeAge** - WebView parameter binding, basic delay structure
 - **GainKnob** - Basic WebView setup, relative knob drag pattern
 
 ### JUCE Critical Patterns
@@ -340,7 +380,12 @@
 - juce8-critical-patterns.md #12: WebSliderParameterAttachment 3-param constructor
 - juce8-critical-patterns.md #15: valueChangedEvent callback (no parameters passed)
 - juce8-critical-patterns.md #16: Relative knob drag (frame-delta, not absolute)
-- juce8-critical-patterns.md #20: VU meter requestAnimationFrame loop
+
+### Technical References
+- Curtis Roads: "Real-Time Granular Synthesis with Texture Control"
+- Granular synthesis parameters: 50-100ms grain size, 4x overlap for smooth output
+- Pitch ratio formula: `ratio = 2^(semitones / 12)`
+- Hann window formula: `window[i] = 0.5 * (1.0 - cos(2π * i / grainSize))`
 
 ---
 
@@ -349,30 +394,38 @@
 **Stage 1 (Foundation + Shell):**
 - [ ] Project builds without errors (VST3, AU, Standalone)
 - [ ] Plugin loads in DAW
-- [ ] All 8 parameters defined in APVTS
-- [ ] Parameter ranges correct (dB for levels, % for doppler, bars/ms for delay)
+- [ ] All 15 parameters defined in APVTS
+- [ ] Parameter ranges correct (dB, %, Hz, ms units)
+- [ ] No references to deleted parameters (lfoRate, lfoDepth, lfoTempoSync)
 
 **Stage 2 (DSP):**
-- [ ] Parallel routing works (distortion + delay paths independent)
-- [ ] Tube saturation adds warmth and harmonics
-- [ ] Delay line responds to delayTime parameter (0-16000ms or 1/16-8 bars)
-- [ ] Tempo sync switches between musical and free time modes
-- [ ] Doppler effect audible (pitch shift via delay time modulation)
-- [ ] Granular pitch shifter shifts pitch ±1 octave smoothly
-- [ ] pitchEnable toggles between pitch+time and time-only modes
-- [ ] CPU usage within budget (~40% single core at 48kHz)
-- [ ] No clicks, pops, or artifacts
+- [ ] Series processing chain works (stereo width → delay → granular doppler → saturation → output)
+- [ ] Stereo width creates spatial positioning via L/R delay differential
+- [ ] Granular pitch shifter shifts pitch accurately (±12 semitones / ±1 octave)
+- [ ] **Cumulative doppler behavior verified** (each repeat shifts pitch further)
+- [ ] Feedback loop creates repeating delays with cumulative effects
+- [ ] Saturation in feedback loop creates cumulative tape warmth
+- [ ] Filters shape feedback frequency response (hi-cut + lo-cut)
+- [ ] All bypass toggles work correctly (stereoWidth, delay, doppler, saturation)
+- [ ] grainSize and grainOverlap parameters adjust quality vs CPU trade-off
+- [ ] Feedback loop is stable (no runaway oscillation at 95% feedback)
+- [ ] CPU usage within budget (~37-57% single core at 48kHz)
+- [ ] No clicks, pops, or artifacts at default settings
+- [ ] Acceptable artifacts at extreme settings (documented)
 
 **Stage 3 (GUI):**
-- [ ] WebView UI loads with holographic/3D aesthetic
+- [ ] WebView UI loads with updated parameter set (15 parameters)
+- [ ] Main controls section displays correctly
+- [ ] Bypass controls section displays correctly
+- [ ] Advanced settings panel displays correctly (collapsible)
 - [ ] All knobs interactive (drag updates parameters)
 - [ ] Host automation updates UI knobs
-- [ ] VU meter animates with ballistic motion
-- [ ] Parameter values display correctly (formatted strings)
+- [ ] Parameter values display correctly (formatted strings with units)
 - [ ] No frozen knobs or binding issues
+- [ ] No references to deleted parameters in UI code
 
 **Stage 4 (Validation):**
-- [ ] 10 presets created (showcasing doppler effect ranges)
+- [ ] 10 presets created (showcasing cumulative doppler + stereo width + saturation)
 - [ ] pluginval passes (VST3, AU, Standalone)
 - [ ] Build script succeeds
 - [ ] Changelog generated
@@ -382,44 +435,57 @@
 
 ## Risk Assessment
 
-**Highest Risk: Granular Pitch Shifter (Phase 2.3)**
+**Highest Risk: Granular Pitch Shifter (Phase 2.2)**
 - 70% of project risk
 - Most algorithmically complex component
 - No JUCE class (custom implementation required)
-- Artifact risk (graininess if tuned incorrectly)
-- CPU cost significant (~25-30% single core)
+- Moderate to high CPU cost (~20-40% single core)
+- Artifacts possible if grain size/overlap incorrect
+- Cumulative behavior adds testing complexity
 
 **Mitigation:**
-- Phase 2.1 and 2.2 establish working foundation before tackling granular engine
-- Granular implementation isolated (can test independently)
-- Fallback to 2-grain overlap if 4-grain too CPU-intensive
-- Reference existing granular implementations (JUCE forum examples, Curtis Roads literature)
+- Implement in isolation first (unit test before feedback integration)
+- Start with 2-grain overlap (simpler, lower CPU)
+- Make grain settings user-adjustable (advanced panel)
+- Reference Curtis Roads granular synthesis literature
+- Profile CPU early and optimize if >50% single core
+- Test pitch accuracy with tone generator
 
-**Medium Risk: Tempo Sync (Phase 2.2)**
+**Medium Risk: Cumulative Feedback Behavior (Phase 2.3)**
 - 20% of project risk
-- Host BPM query may fail (need fallback)
-- Tempo changes mid-buffer require smooth transitions
+- Cumulative pitch shift grows exponentially (each repeat multiplies pitch ratio)
+- High feedback + high doppler may shift pitch out of audible range quickly
+- Saturation in feedback may interact unpredictably
 
 **Mitigation:**
-- AngelGrain reference implementation (proven pattern)
-- Default to 120 BPM if host doesn't provide tempo
-- Smooth delay time changes over 10ms (prevent clicks)
+- Document expected cumulative behavior (pitch escalation is intentional)
+- Test with extreme settings (feedback=95%, doppler=+50%, saturation=+24dB)
+- Clamp feedback gain to 0.95 maximum (5% safety margin)
+- Add soft clipper after saturation if runaway occurs
 
 **Low Risk: All Other Components**
 - 10% of project risk
-- Tube saturation is simple (tanh waveshaping)
-- Parallel routing is straightforward
+- Stereo width is simple (differential L/R delays with exponential smoothing)
+- Saturation is simple (tanh waveshaping)
+- Filters are standard JUCE IIR
 - WebView UI is standard pattern
 
 ---
 
 ## Duration Estimate
 
-**Total estimated time:** 9-15 days
+**Total estimated time:** 6-9 days
 
 - Stage 1 (Foundation + Shell): 1 day
-- Stage 2 (DSP - 3 phases): 5-8 days
-- Stage 3 (GUI - 3 phases): 3-6 days
+- Stage 2 (DSP - 5 phases): 6-9 days
+  - Phase 2.1: 1 day
+  - Phase 2.2: 3-5 days ← CRITICAL PATH
+  - Phase 2.3: 1 day
+  - Phase 2.4: 1 day
+  - Phase 2.5: 0.5-1 day
+- Stage 3 (GUI): 1 day
 - Stage 4 (Validation): 1 day
 
-**Critical path:** Phase 2.3 (Granular Pitch Shifting) is longest and highest risk. All other stages can proceed once foundation is in place.
+**Critical path:** Phase 2.2 (Granular Pitch Shifter) is longest and highest risk. All subsequent phases depend on granular engine being stable and performant.
+
+**Risk buffer:** 3-day range (6-9 days) accounts for granular engine complexity and potential CPU optimization needs.
