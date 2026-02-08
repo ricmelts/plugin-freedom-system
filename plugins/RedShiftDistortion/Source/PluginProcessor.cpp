@@ -102,6 +102,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         false
     ));
 
+    // lfoDepth - Float (0.0 to 100.0 %) controls wow & flutter intensity
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { "lfoDepth", 1 },
+        "LFO Depth",
+        juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f),
+        20.0f,  // 20% default for moderate tape-style modulation
+        "%"
+    ));
+
     return layout;
 }
 
@@ -188,6 +197,7 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     auto* reverseParam = parameters.getRawParameterValue("reverse");
     auto* lfoRateParam = parameters.getRawParameterValue("lfoRate");
     auto* lfoTempoSyncParam = parameters.getRawParameterValue("lfoTempoSync");
+    auto* lfoDepthParam = parameters.getRawParameterValue("lfoDepth");
 
     float saturationDb = saturationParam->load();
     float dopplerShift = dopplerShiftParam->load();
@@ -196,6 +206,7 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     float filterBandHigh = filterBandHighParam->load();  // Lowpass cutoff (20-20000 Hz)
     float masterOutputDb = masterOutputParam->load();
     float lfoRate = lfoRateParam->load();
+    float lfoDepthPercent = lfoDepthParam->load();  // 0-100%
 
     // Bypass states
     bool bypassSaturation = bypassSaturationParam->load() > 0.5f;
@@ -285,16 +296,32 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
                     double bpm = *position->getBpm();
                     bpm = juce::jlimit(20.0, 300.0, bpm);  // Clamp to valid range
 
-                    // Map lfoRate (0.1-10Hz) to musical divisions
-                    // lfoRate 0.5 = 1 bar, 1.0 = 1/2 bar, 2.0 = 1/4 bar, etc.
-                    float beatsPerCycle = 4.0f / lfoRate;  // Convert rate to beats
-                    lfoFreq = static_cast<float>((bpm / 60.0) / beatsPerCycle);
+                    // Map lfoRate (0.1-10Hz) to musical divisions (proper tempo sync)
+                    // lfoRate: 0.125 = 8 bars, 0.25 = 4 bars, 0.5 = 2 bars, 1.0 = 1 bar,
+                    //          2.0 = 1/2 note, 4.0 = 1/4 note, 8.0 = 1/8 note, 10.0 = 1/16 note
+
+                    // Calculate beats per second from BPM
+                    float beatsPerSecond = static_cast<float>(bpm / 60.0);
+
+                    // Map lfoRate to divisions
+                    float division;
+                    if (lfoRate <= 0.25f)      division = 16.0f;  // 4 bars (16 beats)
+                    else if (lfoRate <= 0.5f)  division = 8.0f;   // 2 bars (8 beats)
+                    else if (lfoRate <= 1.0f)  division = 4.0f;   // 1 bar (4 beats)
+                    else if (lfoRate <= 2.0f)  division = 2.0f;   // Half note (2 beats)
+                    else if (lfoRate <= 4.0f)  division = 1.0f;   // Quarter note (1 beat)
+                    else if (lfoRate <= 6.0f)  division = 0.5f;   // Eighth note
+                    else                       division = 0.25f;  // Sixteenth note
+
+                    // Calculate LFO frequency: cycles per second = (beats per second) / (beats per cycle)
+                    lfoFreq = beatsPerSecond / division;
                 }
             }
         }
 
-        // Modulation depth scaled by doppler magnitude: 0-10% delay time variation
-        const float modDepth = std::abs(currentDopplerControl) * 0.1f;
+        // LFO Depth: User-controllable wow & flutter intensity (0-100% → 0-20% delay modulation)
+        // Higher percentages = more aggressive pitch artifacts (tape-style)
+        const float modDepth = (lfoDepthPercent / 100.0f) * 0.20f;  // Scale to 0-20% delay variation
 
         // Calculate LFO output (sine wave, range -1 to +1)
         const float lfoValue = std::sin(lfoPhase);
@@ -346,10 +373,9 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 
             if (reverse)
             {
-                // Process through professional reverse delay with Hann windowing and crossfading
-                const int delayInSamples = static_cast<int>(leftDelayModulated);
-                delayedL = reverseDelay.processSample(delayedL, 0, delayInSamples);
-                delayedR = reverseDelay.processSample(delayedR, 1, delayInSamples);
+                // Process through professional reverse delay with double-buffering and crossfading
+                delayedL = reverseDelay.processSample(delayedL, 0);
+                delayedR = reverseDelay.processSample(delayedR, 1);
             }
 
             leftIn = delayedL;

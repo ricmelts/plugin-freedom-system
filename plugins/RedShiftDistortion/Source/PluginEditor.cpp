@@ -11,6 +11,7 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     filterBandHighRelay = std::make_unique<juce::WebSliderRelay>("filterBandHigh");
     filterBandLowRelay = std::make_unique<juce::WebSliderRelay>("filterBandLow");
     lfoRateRelay = std::make_unique<juce::WebSliderRelay>("lfoRate");
+    lfoDepthRelay = std::make_unique<juce::WebSliderRelay>("lfoDepth");
     distortionLevelRelay = std::make_unique<juce::WebSliderRelay>("distortionLevel");
     masterOutputRelay = std::make_unique<juce::WebSliderRelay>("masterOutput");
     reverseRelay = std::make_unique<juce::WebToggleButtonRelay>("reverse");
@@ -29,6 +30,7 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
             .withOptionsFrom(*filterBandHighRelay)
             .withOptionsFrom(*filterBandLowRelay)
             .withOptionsFrom(*lfoRateRelay)
+            .withOptionsFrom(*lfoDepthRelay)
             .withOptionsFrom(*distortionLevelRelay)
             .withOptionsFrom(*masterOutputRelay)
             .withOptionsFrom(*reverseRelay)
@@ -55,6 +57,9 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
 
     lfoRateAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("lfoRate"), *lfoRateRelay, nullptr);
+
+    lfoDepthAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("lfoDepth"), *lfoDepthRelay, nullptr);
 
     distortionLevelAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("distortionLevel"), *distortionLevelRelay, nullptr);

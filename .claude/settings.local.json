@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(test:*)",
+      "Bash(if [ -f \".claude/preferences.json\" ])",
+      "Bash(then jq -r '.workflow.mode // \"\"manual\"\"' .claude/preferences.json)",
+      "Bash(else echo \"manual\")",
+      "Bash(fi)",
+      "SlashCommand(/plugin-workflow:*)",
+      "SlashCommand(/context-resume)",
+      "Bash(./scripts/build-and-install.sh:*)",
+      "Bash(tee:*)",
+      "Bash(cmake:*)",
+      "Read(//Applications/**)",
+      "SlashCommand(/setup)",
+      "Read(//Users/ericmeltser/**)",
+      "Bash(python3 /Users/ericmeltser/plugin-freedom-system/.claude/hooks/validators/validate-cross-contract.py /Users/ericmeltser/plugin-freedom-system/plugins/RedShiftDistortion)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat(RedShiftDistortion): Stage 1 - Foundation + Shell complete\n\nBuild system created with JUCE 8 configuration\n8 parameters implemented with APVTS\nState management (save/load) functional\nCompilation verified (VST3, AU)\n\nParameters:\n- saturation (Float, -12.0 to 24.0 dB)\n- dopplerShift (Float, -50.0 to 50.0 %)\n- pitchEnable (Bool)\n- delayTime (Float, 0.0 to 16000.0 ms)\n- tempoSync (Bool)\n- delayLevel (Float, -60.0 to 0.0 dB)\n- distortionLevel (Float, -60.0 to 0.0 dB)\n- masterOutput (Float, -60.0 to 12.0 dB)\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "WebFetch(domain:github.com)",
+      "Read(//Library/Audio/Plug-Ins/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

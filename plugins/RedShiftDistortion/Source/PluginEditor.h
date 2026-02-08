@@ -25,6 +25,7 @@ private:
     std::unique_ptr<juce::WebSliderRelay> filterBandHighRelay;
     std::unique_ptr<juce::WebSliderRelay> filterBandLowRelay;
     std::unique_ptr<juce::WebSliderRelay> lfoRateRelay;
+    std::unique_ptr<juce::WebSliderRelay> lfoDepthRelay;
     std::unique_ptr<juce::WebSliderRelay> distortionLevelRelay;
     std::unique_ptr<juce::WebSliderRelay> masterOutputRelay;
     std::unique_ptr<juce::WebToggleButtonRelay> reverseRelay;
@@ -42,6 +43,7 @@ private:
     std::unique_ptr<juce::WebSliderParameterAttachment> filterBandHighAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> filterBandLowAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> lfoRateAttachment;
+    std::unique_ptr<juce::WebSliderParameterAttachment> lfoDepthAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> distortionLevelAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> masterOutputAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> reverseAttachment;

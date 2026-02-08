@@ -4,16 +4,19 @@
 #include <vector>
 
 //==============================================================================
-// Professional Reverse Delay with Grain-Based Windowing
-// Eliminates clicks and digital artifacts through dual-buffer crossfading
+// Professional Reverse Delay with Double-Buffering and Crossfading
+// Uses state machine to accumulate grains, then play back in reverse
 //==============================================================================
 class ReverseDelay
 {
 public:
+    enum class State { FILLING, PLAYING, CROSSFADING };
+
     ReverseDelay() = default;
 
     void prepare(double sampleRate, int maxDelayMs)
     {
+        fs = static_cast<float>(sampleRate);
         bufferSize = static_cast<int>((sampleRate * maxDelayMs) / 1000.0);
 
         // Dual buffers for seamless crossfading
@@ -22,15 +25,16 @@ public:
         bufferA.clear();
         bufferB.clear();
 
-        // Pre-calculate Hann window for grain envelope
-        grainSize = 2048;  // ~46ms at 44.1kHz
-        crossfadeLength = 256;  // ~5.8ms crossfade
-        hannWindow.resize(grainSize);
+        // Grain parameters
+        grainSize = 4096;  // ~93ms at 44.1kHz (larger grain = smoother reverse)
+        crossfadeLength = 64;  // ~1.5ms crossfade (research suggests 32-64 samples)
 
+        // Pre-calculate Hann window for grain envelope
+        hannWindow.resize(static_cast<size_t>(grainSize));
         for (int i = 0; i < grainSize; ++i)
         {
             float phase = static_cast<float>(i) / static_cast<float>(grainSize - 1);
-            hannWindow[i] = 0.5f * (1.0f - std::cos(2.0f * juce::MathConstants<float>::pi * phase));
+            hannWindow[static_cast<size_t>(i)] = 0.5f * (1.0f - std::cos(2.0f * juce::MathConstants<float>::pi * phase));
         }
 
         reset();
@@ -38,117 +42,123 @@ public:
 
     void reset()
     {
-        writePos = 0;
-        readPosA = 0;
-        readPosB = 0;
-        useBufferA = true;
-        crossfadePhase = 0.0f;
+        state = State::FILLING;
+        fillBuffer = &bufferA;
+        playBuffer = &bufferB;
+
+        fillPos = 0;
+        playPos = 0;
+        crossfadePos = 0;
+
         bufferA.clear();
         bufferB.clear();
     }
 
-    float processSample(float input, int channel, int delaySamples)
+    float processSample(float input, int channel)
     {
-        // Write to both buffers continuously
-        bufferA.setSample(channel, writePos, input);
-        bufferB.setSample(channel, writePos, input);
+        float output = 0.0f;
 
-        // Read from active buffer backwards with Hann windowing
-        float outputA = readWithWindow(bufferA, channel, readPosA);
-        float outputB = readWithWindow(bufferB, channel, readPosB);
+        // Always write to fill buffer
+        fillBuffer->setSample(channel, fillPos, input);
 
-        // Crossfade between buffers for seamless operation
-        float crossfade = calculateCrossfade();
-        float output = outputA * (1.0f - crossfade) + outputB * crossfade;
+        switch (state)
+        {
+            case State::FILLING:
+            {
+                // Accumulation phase - output silence or last sample
+                output = (playPos > 0) ? playBuffer->getSample(channel, playPos) : 0.0f;
 
-        // Update positions
-        updatePositions(delaySamples);
+                fillPos++;
+                if (fillPos >= grainSize)
+                {
+                    // Grain full - switch to playback
+                    state = State::PLAYING;
+                    playPos = grainSize - 1;  // Start reading from end
+                    fillPos = 0;  // Reset fill position for next grain
+                }
+                break;
+            }
+
+            case State::PLAYING:
+            {
+                // Read backwards with Hann windowing
+                float window = hannWindow[static_cast<size_t>(playPos)];
+                output = playBuffer->getSample(channel, playPos) * window;
+
+                fillPos++;
+                playPos--;
+
+                // Check if we need to start crossfading
+                if (playPos < crossfadeLength && fillPos >= grainSize - crossfadeLength)
+                {
+                    state = State::CROSSFADING;
+                    crossfadePos = 0;
+                }
+                // Or if playback finished without crossfade
+                else if (playPos < 0)
+                {
+                    // Swap buffers
+                    std::swap(fillBuffer, playBuffer);
+                    state = State::FILLING;
+                    fillPos = 0;
+                    playPos = 0;
+                }
+                break;
+            }
+
+            case State::CROSSFADING:
+            {
+                // Crossfade between ending playback and new grain
+                float oldWindow = hannWindow[static_cast<size_t>(std::max(0, playPos))];
+                float oldSample = (playPos >= 0) ? playBuffer->getSample(channel, playPos) * oldWindow : 0.0f;
+
+                // New grain plays from the end backwards
+                int newPlayPos = grainSize - 1 - crossfadePos;
+                float newWindow = hannWindow[static_cast<size_t>(newPlayPos)];
+                float newSample = fillBuffer->getSample(channel, newPlayPos) * newWindow;
+
+                // Constant-power crossfade
+                float crossfade = static_cast<float>(crossfadePos) / static_cast<float>(crossfadeLength);
+                crossfade = 0.5f * (1.0f - std::cos(juce::MathConstants<float>::pi * crossfade));
+
+                output = oldSample * (1.0f - crossfade) + newSample * crossfade;
+
+                fillPos++;
+                playPos--;
+                crossfadePos++;
+
+                if (crossfadePos >= crossfadeLength)
+                {
+                    // Crossfade complete - swap buffers
+                    std::swap(fillBuffer, playBuffer);
+                    state = State::PLAYING;
+                    playPos = grainSize - 1 - crossfadeLength;  // Continue from crossfade end
+                    fillPos = 0;
+                }
+                break;
+            }
+        }
 
         return output;
     }
 
 private:
+    State state = State::FILLING;
+
     juce::AudioBuffer<float> bufferA, bufferB;
+    juce::AudioBuffer<float>* fillBuffer = nullptr;   // Currently filling
+    juce::AudioBuffer<float>* playBuffer = nullptr;   // Currently playing
+
     std::vector<float> hannWindow;
+
+    float fs = 44100.0f;
     int bufferSize = 0;
-    int grainSize = 2048;
-    int crossfadeLength = 256;
+    int grainSize = 4096;
+    int crossfadeLength = 64;
 
-    int writePos = 0;
-    int readPosA = 0;
-    int readPosB = 0;
-    bool useBufferA = true;
-    float crossfadePhase = 0.0f;
-
-    float readWithWindow(const juce::AudioBuffer<float>& buffer, int channel, int readPos)
-    {
-        if (readPos < 0 || readPos >= bufferSize)
-            return 0.0f;
-
-        // Calculate grain position (wrapping)
-        int grainPos = (writePos - readPos + bufferSize) % grainSize;
-
-        // Apply Hann window envelope
-        float window = (grainPos >= 0 && grainPos < grainSize) ? hannWindow[grainPos] : 0.0f;
-
-        return buffer.getSample(channel, readPos) * window;
-    }
-
-    float calculateCrossfade()
-    {
-        if (crossfadePhase > 0.0f && crossfadePhase < 1.0f)
-        {
-            // Raised cosine crossfade for constant power
-            return 0.5f * (1.0f - std::cos(juce::MathConstants<float>::pi * crossfadePhase));
-        }
-        return useBufferA ? 0.0f : 1.0f;
-    }
-
-    void updatePositions(int delaySamples)
-    {
-        // Advance write position forward
-        writePos = (writePos + 1) % bufferSize;
-
-        // Move read positions backward (reverse playback)
-        readPosA--;
-        readPosB--;
-
-        // Wrap negative positions
-        if (readPosA < 0) readPosA += bufferSize;
-        if (readPosB < 0) readPosB += bufferSize;
-
-        // Update crossfade if active
-        if (crossfadePhase > 0.0f && crossfadePhase < 1.0f)
-        {
-            crossfadePhase += 1.0f / static_cast<float>(crossfadeLength);
-
-            if (crossfadePhase >= 1.0f)
-            {
-                crossfadePhase = 0.0f;
-                useBufferA = !useBufferA;
-            }
-        }
-
-        // Check for boundary and initiate crossfade
-        int distanceToOrigin = std::min(readPosA, readPosB);
-        if (distanceToOrigin < crossfadeLength && crossfadePhase == 0.0f)
-        {
-            // Start crossfade
-            crossfadePhase = 0.01f;
-
-            // Reset inactive buffer's read position
-            if (useBufferA)
-            {
-                readPosB = writePos - delaySamples;
-                if (readPosB < 0) readPosB += bufferSize;
-            }
-            else
-            {
-                readPosA = writePos - delaySamples;
-                if (readPosA < 0) readPosA += bufferSize;
-            }
-        }
-    }
+    int fillPos = 0;      // Write position in fill buffer
+    int playPos = 0;      // Read position in play buffer (counts backwards)
+    int crossfadePos = 0; // Position within crossfade
 };
 
 class RedShiftDistortionAudioProcessor : public juce::AudioProcessor

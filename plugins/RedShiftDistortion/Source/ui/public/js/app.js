@@ -45,6 +45,13 @@ const paramConfigs = {
         unit: 'Hz',
         decimals: 1
     },
+    lfoDepth: {
+        type: 'slider',
+        min: 0.0,
+        max: 100.0,
+        unit: '%',
+        decimals: 1
+    },
     distortionLevel: {
         type: 'slider',
         min: -60.0,
