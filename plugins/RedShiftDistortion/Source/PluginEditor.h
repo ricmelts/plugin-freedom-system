@@ -21,12 +21,10 @@ private:
     // 1️⃣ RELAYS FIRST (no dependencies)
     std::unique_ptr<juce::WebSliderRelay> saturationRelay;
     std::unique_ptr<juce::WebSliderRelay> dopplerShiftRelay;
-    std::unique_ptr<juce::WebSliderRelay> feedbackRelay;
-    std::unique_ptr<juce::WebSliderRelay> hiCutRelay;
-    std::unique_ptr<juce::WebSliderRelay> loCutRelay;
+    std::unique_ptr<juce::WebSliderRelay> delayTimeRelay;
     std::unique_ptr<juce::WebSliderRelay> masterOutputRelay;
-    std::unique_ptr<juce::WebToggleButtonRelay> bypassSaturationRelay;
-    std::unique_ptr<juce::WebToggleButtonRelay> bypassDopplerRelay;
+    std::unique_ptr<juce::WebToggleButtonRelay> pitchEnableRelay;
+    std::unique_ptr<juce::WebToggleButtonRelay> tempoSyncRelay;
 
     // 2️⃣ WEBVIEW SECOND (depends on relays via withOptionsFrom)
     std::unique_ptr<juce::WebBrowserComponent> webView;
@@ -34,12 +32,10 @@ private:
     // 3️⃣ ATTACHMENTS LAST (depend on both relays and webView)
     std::unique_ptr<juce::WebSliderParameterAttachment> saturationAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> dopplerShiftAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment> feedbackAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment> hiCutAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment> loCutAttachment;
+    std::unique_ptr<juce::WebSliderParameterAttachment> delayTimeAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> masterOutputAttachment;
-    std::unique_ptr<juce::WebToggleButtonParameterAttachment> bypassSaturationAttachment;
-    std::unique_ptr<juce::WebToggleButtonParameterAttachment> bypassDopplerAttachment;
+    std::unique_ptr<juce::WebToggleButtonParameterAttachment> pitchEnableAttachment;
+    std::unique_ptr<juce::WebToggleButtonParameterAttachment> tempoSyncAttachment;
 
     // Helper for resource serving
     std::optional<juce::WebBrowserComponent::Resource> getResource(const juce::String& url);

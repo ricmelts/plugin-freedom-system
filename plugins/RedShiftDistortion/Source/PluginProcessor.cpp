@@ -14,7 +14,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         "dB"
     ));
 
-    // dopplerShift - Float (-50.0 to 50.0 %)
+    // dopplerShift - Float (-50.0 to 50.0 %) - TODO: Not yet implemented
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "dopplerShift", 1 },
         "Doppler Shift",
@@ -23,31 +23,27 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         "%"
     ));
 
-    // feedback - Float (0.0 to 95.0 %)
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "feedback", 1 },
-        "Feedback",
-        juce::NormalisableRange<float>(0.0f, 95.0f, 0.1f),
-        0.0f,
-        "%"
+    // pitchEnable - Bool (On/Off) - TODO: Not yet implemented
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID { "pitchEnable", 1 },
+        "Pitch Enable",
+        true
     ));
 
-    // hiCut - Float (2000.0 to 50000.0 Hz) for tape delay feedback filtering (lowpass)
+    // delayTime - Float (0.0 to 2000.0 ms)
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "hiCut", 1 },
-        "Hi Cut",
-        juce::NormalisableRange<float>(2000.0f, 50000.0f, 10.0f),
-        8000.0f,
-        "Hz"
+        juce::ParameterID { "delayTime", 1 },
+        "Delay Time",
+        juce::NormalisableRange<float>(0.0f, 2000.0f, 1.0f),
+        250.0f,
+        "ms"
     ));
 
-    // loCut - Float (50.0 to 1000.0 Hz) for tape delay feedback filtering (highpass)
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "loCut", 1 },
-        "Lo Cut",
-        juce::NormalisableRange<float>(50.0f, 1000.0f, 1.0f),
-        100.0f,
-        "Hz"
+    // tempoSync - Bool (On/Off)
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID { "tempoSync", 1 },
+        "Tempo Sync",
+        false
     ));
 
     // masterOutput - Float (-60.0 to 12.0 dB)
@@ -57,19 +53,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         juce::NormalisableRange<float>(-60.0f, 12.0f, 0.1f),
         0.0f,
         "dB"
-    ));
-
-    // Bypass toggles for troubleshooting
-    layout.add(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID { "bypassSaturation", 1 },
-        "Bypass Saturation",
-        false
-    ));
-
-    layout.add(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID { "bypassDoppler", 1 },
-        "Bypass Doppler",
-        false
     ));
 
     return layout;
@@ -94,39 +77,16 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
     spec.numChannels = 2;  // Stereo only
 
-    // Prepare mono delay lines (one for left, one for right)
-    const int maxDelaySamples = static_cast<int>(sampleRate * 0.01);  // 10ms max
-    delayLineLeft.setMaximumDelayInSamples(maxDelaySamples);
-    delayLineRight.setMaximumDelayInSamples(maxDelaySamples);
-
-    // Each delay line is mono (1 channel)
-    juce::dsp::ProcessSpec monoSpec = spec;
-    monoSpec.numChannels = 1;
-
-    delayLineLeft.prepare(monoSpec);
-    delayLineRight.prepare(monoSpec);
-    delayLineLeft.reset();
-    delayLineRight.reset();
-
-    // Pre-allocate feedback buffer (real-time safety)
-    const int numChannels = 2;  // Force stereo
-    feedbackBuffer.setSize(numChannels, samplesPerBlock);
-    feedbackBuffer.clear();
-
-    // Prepare tape delay feedback filters
-    hiCutFilter.prepare(spec);
-    loCutFilter.prepare(spec);
-    hiCutFilter.reset();
-    loCutFilter.reset();
-
-    // Initialize doppler control smoothing
-    currentDopplerControl = 0.0f;
+    // Prepare main delay line - max 2 seconds
+    const int maxDelaySamples = static_cast<int>(sampleRate * 2.0);
+    mainDelayLine.setMaximumDelayInSamples(maxDelaySamples);
+    mainDelayLine.prepare(spec);
+    mainDelayLine.reset();
 }
 
 void RedShiftDistortionAudioProcessor::releaseResources()
 {
-    // Release feedback buffer to save memory when plugin not in use
-    feedbackBuffer.setSize(0, 0);
+    // Nothing to release (delay line managed by JUCE)
 }
 
 void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -141,145 +101,100 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     // Read parameters (atomic, real-time safe)
     auto* saturationParam = parameters.getRawParameterValue("saturation");
     auto* dopplerShiftParam = parameters.getRawParameterValue("dopplerShift");
-    auto* feedbackParam = parameters.getRawParameterValue("feedback");
-    auto* hiCutParam = parameters.getRawParameterValue("hiCut");
-    auto* loCutParam = parameters.getRawParameterValue("loCut");
+    auto* pitchEnableParam = parameters.getRawParameterValue("pitchEnable");
+    auto* delayTimeParam = parameters.getRawParameterValue("delayTime");
+    auto* tempoSyncParam = parameters.getRawParameterValue("tempoSync");
     auto* masterOutputParam = parameters.getRawParameterValue("masterOutput");
-
-    // Bypass parameters
-    auto* bypassSaturationParam = parameters.getRawParameterValue("bypassSaturation");
-    auto* bypassDopplerParam = parameters.getRawParameterValue("bypassDoppler");
 
     float saturationDb = saturationParam->load();
     float dopplerShift = dopplerShiftParam->load();
-    float feedbackPercent = feedbackParam->load();
-    float hiCutFreq = hiCutParam->load();
-    float loCutFreq = loCutParam->load();
+    bool pitchEnabled = pitchEnableParam->load() > 0.5f;
+    float delayTimeMs = delayTimeParam->load();
+    bool tempoSyncEnabled = tempoSyncParam->load() > 0.5f;
     float masterOutputDb = masterOutputParam->load();
-
-    // Bypass states
-    bool bypassSaturation = bypassSaturationParam->load() > 0.5f;
-    bool bypassDoppler = bypassDopplerParam->load() > 0.5f;
 
     // Convert parameters to usable values
     float saturationGain = std::pow(10.0f, saturationDb / 20.0f);
-    float feedbackGain = feedbackPercent / 100.0f;  // 0-95% → 0.0-0.95
     float masterOutputGain = std::pow(10.0f, masterOutputDb / 20.0f);
 
-    // SMOOTH DOPPLER CONTROL: Map from -50% to +50% → -1 to +1
-    const float targetDopplerControl = bypassDoppler ? 0.0f : (dopplerShift / 50.0f);
-    const float dopplerSmoothingFactor = 0.01f;  // Smooth to avoid clicks
-    currentDopplerControl += (targetDopplerControl - currentDopplerControl) * dopplerSmoothingFactor;
+    // Calculate delay time (tempo-synced or free)
+    float actualDelayTimeMs = getTempoSyncedDelayTime(delayTimeMs, tempoSyncEnabled);
+    float actualDelayTimeSamples = (actualDelayTimeMs / 1000.0f) * static_cast<float>(spec.sampleRate);
+    actualDelayTimeSamples = juce::jlimit(0.0f, static_cast<float>(spec.sampleRate * 2.0), actualDelayTimeSamples);
+    mainDelayLine.setDelay(actualDelayTimeSamples);
 
     const int numSamples = buffer.getNumSamples();
-    const int numChannels = buffer.getNumChannels();
-
-    // Ensure feedback buffer matches current block size
-    if (feedbackBuffer.getNumSamples() != numSamples)
-    {
-        feedbackBuffer.setSize(2, numSamples, false, false, true);
-        feedbackBuffer.clear();
-    }
-
-    // Update feedback filter coefficients (only when they change significantly)
-    *hiCutFilter.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(spec.sampleRate, hiCutFreq);
-    *loCutFilter.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(spec.sampleRate, loCutFreq);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // SERIES PROCESSING CHAIN: Input → Doppler Delay → Saturation → Output
+    // SERIES PROCESSING: Delay → (Doppler TODO) → Saturation → Master Output
     // ═══════════════════════════════════════════════════════════════════════════
 
-    // Psychoacoustic Doppler Delay Constants
-    const float ITD_MAX = 0.00052f;  // 520 microseconds (ear separation)
-    const float BASE_DELAY_MS = 1.0f;  // 1ms stability offset (d0)
-
-    // Calculate base delay (d0) in samples
-    const float d0Samples = (BASE_DELAY_MS / 1000.0f) * static_cast<float>(spec.sampleRate);
-
-    // Calculate differential delay from psychoacoustic ITD
-    // deltaDelay(t) = (ITD_MAX / 2) * x(t)   where x(t) ∈ [-1, 1]
-    const float deltaDelaySamples = (ITD_MAX / 2.0f) * currentDopplerControl * static_cast<float>(spec.sampleRate);
-
-    // Compute L/R delay times with opposite differential
-    // delayLeft(t)  = d0 + deltaDelay(t)
-    // delayRight(t) = d0 - deltaDelay(t)
-    const float leftDelaySamples = d0Samples + deltaDelaySamples;
-    const float rightDelaySamples = d0Samples - deltaDelaySamples;
-
-    // Set delay amounts ONCE per buffer (not per sample!)
-    if (!bypassDoppler)
-    {
-        delayLineLeft.setDelay(leftDelaySamples);
-        delayLineRight.setDelay(rightDelaySamples);
-    }
-
-    // Process each sample through the series chain
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        // ─────────────────────────────────────────────────────────────────────
-        // STAGE 1: DOPPLER DELAY (with feedback)
-        // ─────────────────────────────────────────────────────────────────────
-
         float leftIn = buffer.getSample(0, sample);
         float rightIn = buffer.getSample(1, sample);
 
-        if (!bypassDoppler)
-        {
-            // Add filtered feedback to input
-            float feedbackL = feedbackBuffer.getSample(0, sample) * feedbackGain;
-            float feedbackR = feedbackBuffer.getSample(1, sample) * feedbackGain;
-            leftIn += feedbackL;
-            rightIn += feedbackR;
+        // STAGE 1: Delay Line
+        mainDelayLine.pushSample(0, leftIn);
+        mainDelayLine.pushSample(1, rightIn);
 
-            // Apply psychoacoustic doppler delay (fractional delay with linear interpolation)
-            // CRITICAL: Push samples INTO delay line first
-            delayLineLeft.pushSample(0, leftIn);
-            delayLineRight.pushSample(0, rightIn);
+        float leftOut = mainDelayLine.popSample(0);
+        float rightOut = mainDelayLine.popSample(1);
 
-            // Then pop delayed samples OUT (uses delay set by setDelay())
-            float delayedL = delayLineLeft.popSample(0);
-            float delayedR = delayLineRight.popSample(0);
+        // STAGE 2: Doppler Pitch/Time Stretch (TODO - currently pass-through)
+        // Future: Implement granular synthesis or pitch-shift based on dopplerShift and pitchEnabled
+        juce::ignoreUnused(dopplerShift, pitchEnabled);
 
-            leftIn = delayedL;
-            rightIn = delayedR;
+        // STAGE 3: Tube Saturation
+        leftOut = std::tanh(saturationGain * leftOut);
+        rightOut = std::tanh(saturationGain * rightOut);
 
-            // Store delayed signal for feedback (will be filtered below)
-            feedbackBuffer.setSample(0, sample, leftIn);
-            feedbackBuffer.setSample(1, sample, rightIn);
-        }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // STAGE 2: SATURATION
-        // ─────────────────────────────────────────────────────────────────────
-
-        if (!bypassSaturation)
-        {
-            // Tube saturation: output = tanh(gain * input)
-            leftIn = std::tanh(saturationGain * leftIn);
-            rightIn = std::tanh(saturationGain * rightIn);
-        }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // STAGE 3: MASTER OUTPUT
-        // ─────────────────────────────────────────────────────────────────────
-
-        buffer.setSample(0, sample, leftIn * masterOutputGain);
-        buffer.setSample(1, sample, rightIn * masterOutputGain);
+        // STAGE 4: Master Output
+        buffer.setSample(0, sample, leftOut * masterOutputGain);
+        buffer.setSample(1, sample, rightOut * masterOutputGain);
     }
+}
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // POST-PROCESSING: Filter feedback buffer for next iteration
-    // ─────────────────────────────────────────────────────────────────────────
+float RedShiftDistortionAudioProcessor::getTempoSyncedDelayTime(float delayTimeParam, bool tempoSyncEnabled)
+{
+    if (!tempoSyncEnabled)
+        return delayTimeParam; // Free time mode - return milliseconds directly
 
-    if (!bypassDoppler && feedbackGain > 0.001f)
-    {
-        juce::dsp::AudioBlock<float> feedbackBlock(feedbackBuffer);
-        juce::dsp::ProcessContextReplacing<float> feedbackContext(feedbackBlock);
+    // Get host BPM
+    auto playHead = getPlayHead();
+    if (playHead == nullptr)
+        return delayTimeParam;
 
-        // Apply lo-cut (high-pass) then hi-cut (low-pass) to feedback signal
-        loCutFilter.process(feedbackContext);
-        hiCutFilter.process(feedbackContext);
-    }
+    auto position = playHead->getPosition();
+    if (!position.hasValue())
+        return delayTimeParam;
+
+    auto bpm = position->getBpm();
+    if (!bpm.hasValue())
+        bpm = 120.0; // Default BPM
+
+    // Clamp BPM to reasonable range
+    double currentBpm = juce::jlimit(20.0, 300.0, *bpm);
+
+    // Convert to quarter note duration
+    double quarterNoteDuration = (60000.0 / currentBpm); // 1/4 note in ms
+
+    // Map parameter ranges to musical divisions
+    // 0-250ms → 1/16 note (0.25 beats)
+    // 250-500ms → 1/8 note (0.5 beats)
+    // 500-1000ms → 1/4 note (1.0 beats)
+    // 1000-1500ms → 1/2 note (2.0 beats)
+    // 1500-2000ms → 1 bar (4.0 beats)
+    if (delayTimeParam < 250.0f)
+        return static_cast<float>(quarterNoteDuration * 0.25); // 1/16 note
+    else if (delayTimeParam < 500.0f)
+        return static_cast<float>(quarterNoteDuration * 0.5); // 1/8 note
+    else if (delayTimeParam < 1000.0f)
+        return static_cast<float>(quarterNoteDuration); // 1/4 note
+    else if (delayTimeParam < 1500.0f)
+        return static_cast<float>(quarterNoteDuration * 2.0); // 1/2 note
+    else
+        return static_cast<float>(quarterNoteDuration * 4.0); // 1 bar
 }
 
 juce::AudioProcessorEditor* RedShiftDistortionAudioProcessor::createEditor()

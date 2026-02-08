@@ -14,81 +14,111 @@
         <!-- Header -->
         <div class="header">
             <h1>RedShiftDistortion</h1>
-            <p class="subtitle">Parallel Delay & Tube Distortion with Doppler Effects</p>
+            <p class="subtitle">Psychoacoustic Doppler Delay & Tube Saturation</p>
         </div>
 
-        <!-- Main Controls Section -->
-        <div class="controls-section">
-            <!-- Saturation Control -->
-            <div class="control-group">
-                <label for="saturation">Saturation</label>
-                <div class="knob" id="saturation" data-param="saturation">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
+        <!-- Main Knobs Section - Symmetric Layout -->
+        <div class="knobs-section">
+            <!-- Row 1: Top knobs -->
+            <div class="knobs-row-top">
+                <!-- Saturation -->
+                <div class="control-group">
+                    <label for="saturation">Saturation</label>
+                    <div class="knob knob-small" id="saturation" data-param="saturation">
+                        <div class="knob-track"></div>
+                        <div class="knob-indicator"></div>
+                    </div>
+                    <div class="value-display" id="saturation-value">0.0 dB</div>
                 </div>
-                <div class="value-display" id="saturation-value">0.0 dB</div>
+
+                <!-- Feedback -->
+                <div class="control-group">
+                    <label for="feedback">Feedback</label>
+                    <div class="knob knob-small" id="feedback" data-param="feedback">
+                        <div class="knob-track"></div>
+                        <div class="knob-indicator"></div>
+                    </div>
+                    <div class="value-display" id="feedback-value">0.0 %</div>
+                </div>
+
+                <!-- Delay Time -->
+                <div class="control-group">
+                    <label for="delayTime">Delay Time</label>
+                    <div class="knob knob-small" id="delayTime" data-param="delayTime">
+                        <div class="knob-track"></div>
+                        <div class="knob-indicator"></div>
+                    </div>
+                    <div class="value-display" id="delayTime-value">250.0 ms</div>
+                </div>
             </div>
 
-            <!-- Doppler Shift Control -->
-            <div class="control-group">
-                <label for="dopplerShift">Doppler Shift</label>
-                <div class="knob" id="dopplerShift" data-param="dopplerShift">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
+            <!-- Row 2: Center - Doppler Shift (LARGE) -->
+            <div class="knobs-row-center">
+                <div class="control-group-center">
+                    <label for="dopplerShift">Doppler Shift</label>
+                    <div class="knob knob-large" id="dopplerShift" data-param="dopplerShift">
+                        <div class="knob-track"></div>
+                        <div class="knob-indicator"></div>
+                    </div>
+                    <div class="value-display" id="dopplerShift-value">0.0 %</div>
                 </div>
-                <div class="value-display" id="dopplerShift-value">0.0 %</div>
+            </div>
+
+            <!-- Row 3: Bottom knobs -->
+            <div class="knobs-row-bottom">
+                <!-- Hi Cut -->
+                <div class="control-group">
+                    <label for="hiCut">Hi Cut</label>
+                    <div class="knob knob-small" id="hiCut" data-param="hiCut">
+                        <div class="knob-track"></div>
+                        <div class="knob-indicator"></div>
+                    </div>
+                    <div class="value-display" id="hiCut-value">8000 Hz</div>
+                </div>
+
+                <!-- Lo Cut -->
+                <div class="control-group">
+                    <label for="loCut">Lo Cut</label>
+                    <div class="knob knob-small" id="loCut" data-param="loCut">
+                        <div class="knob-track"></div>
+                        <div class="knob-indicator"></div>
+                    </div>
+                    <div class="value-display" id="loCut-value">100 Hz</div>
+                </div>
+
+                <!-- Master Output -->
+                <div class="control-group">
+                    <label for="masterOutput">Master Output</label>
+                    <div class="knob knob-small" id="masterOutput" data-param="masterOutput">
+                        <div class="knob-track"></div>
+                        <div class="knob-indicator"></div>
+                    </div>
+                    <div class="value-display" id="masterOutput-value">0.0 dB</div>
+                </div>
             </div>
         </div>
 
-        <!-- Mixer Section -->
-        <div class="mixer-section">
-            <h2>Parallel Mix</h2>
-
-            <!-- Feedback -->
-            <div class="control-group">
-                <label for="feedback">Feedback</label>
-                <div class="knob" id="feedback" data-param="feedback">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
+        <!-- Switches Section - All toggles at bottom -->
+        <div class="switches-section">
+            <div class="switches-row">
+                <!-- Reverse Delay -->
+                <div class="toggle-group">
+                    <label for="reverseDelay">Reverse Delay</label>
+                    <div class="toggle-switch" id="reverseDelay" data-param="reverseDelay">
+                        <div class="toggle-track"></div>
+                        <div class="toggle-thumb"></div>
+                    </div>
                 </div>
-                <div class="value-display" id="feedback-value">0.0 %</div>
-            </div>
 
-            <!-- Hi Cut (Tape Delay Filter) -->
-            <div class="control-group">
-                <label for="hiCut">Hi Cut</label>
-                <div class="knob" id="hiCut" data-param="hiCut">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
+                <!-- Tempo Sync -->
+                <div class="toggle-group">
+                    <label for="tempoSync">Tempo Sync</label>
+                    <div class="toggle-switch" id="tempoSync" data-param="tempoSync">
+                        <div class="toggle-track"></div>
+                        <div class="toggle-thumb"></div>
+                    </div>
                 </div>
-                <div class="value-display" id="hiCut-value">8000 Hz</div>
-            </div>
 
-            <!-- Lo Cut (Tape Delay Filter) -->
-            <div class="control-group">
-                <label for="loCut">Lo Cut</label>
-                <div class="knob" id="loCut" data-param="loCut">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="loCut-value">100 Hz</div>
-            </div>
-
-            <!-- Master Output -->
-            <div class="control-group">
-                <label for="masterOutput">Master Output</label>
-                <div class="knob" id="masterOutput" data-param="masterOutput">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="masterOutput-value">0.0 dB</div>
-            </div>
-        </div>
-
-        <!-- Bypass Controls (Troubleshooting) -->
-        <div class="bypass-section">
-            <h2>Bypass (Troubleshooting)</h2>
-            <div class="bypass-toggles-row">
                 <!-- Bypass Saturation -->
                 <div class="toggle-group">
                     <label for="bypassSaturation">Bypass Saturation</label>

@@ -7,12 +7,10 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     // 1. Create relays FIRST (initialize with parameter IDs matching APVTS)
     saturationRelay = std::make_unique<juce::WebSliderRelay>("saturation");
     dopplerShiftRelay = std::make_unique<juce::WebSliderRelay>("dopplerShift");
-    feedbackRelay = std::make_unique<juce::WebSliderRelay>("feedback");
-    hiCutRelay = std::make_unique<juce::WebSliderRelay>("hiCut");
-    loCutRelay = std::make_unique<juce::WebSliderRelay>("loCut");
+    delayTimeRelay = std::make_unique<juce::WebSliderRelay>("delayTime");
     masterOutputRelay = std::make_unique<juce::WebSliderRelay>("masterOutput");
-    bypassSaturationRelay = std::make_unique<juce::WebToggleButtonRelay>("bypassSaturation");
-    bypassDopplerRelay = std::make_unique<juce::WebToggleButtonRelay>("bypassDoppler");
+    pitchEnableRelay = std::make_unique<juce::WebToggleButtonRelay>("pitchEnable");
+    tempoSyncRelay = std::make_unique<juce::WebToggleButtonRelay>("tempoSync");
 
     // 2. Create WebView with relay options
     webView = std::make_unique<juce::WebBrowserComponent>(
@@ -21,12 +19,10 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
             .withResourceProvider([this](const auto& url) { return getResource(url); })
             .withOptionsFrom(*saturationRelay)
             .withOptionsFrom(*dopplerShiftRelay)
-            .withOptionsFrom(*feedbackRelay)
-            .withOptionsFrom(*hiCutRelay)
-            .withOptionsFrom(*loCutRelay)
+            .withOptionsFrom(*delayTimeRelay)
             .withOptionsFrom(*masterOutputRelay)
-            .withOptionsFrom(*bypassSaturationRelay)
-            .withOptionsFrom(*bypassDopplerRelay)
+            .withOptionsFrom(*pitchEnableRelay)
+            .withOptionsFrom(*tempoSyncRelay)
     );
 
     // 3. Create attachments LAST (connect parameters to relays)
@@ -36,23 +32,17 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     dopplerShiftAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("dopplerShift"), *dopplerShiftRelay, nullptr);
 
-    feedbackAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *processorRef.parameters.getParameter("feedback"), *feedbackRelay, nullptr);
-
-    hiCutAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *processorRef.parameters.getParameter("hiCut"), *hiCutRelay, nullptr);
-
-    loCutAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *processorRef.parameters.getParameter("loCut"), *loCutRelay, nullptr);
+    delayTimeAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("delayTime"), *delayTimeRelay, nullptr);
 
     masterOutputAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("masterOutput"), *masterOutputRelay, nullptr);
 
-    bypassSaturationAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
-        *processorRef.parameters.getParameter("bypassSaturation"), *bypassSaturationRelay, nullptr);
+    pitchEnableAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("pitchEnable"), *pitchEnableRelay, nullptr);
 
-    bypassDopplerAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
-        *processorRef.parameters.getParameter("bypassDoppler"), *bypassDopplerRelay, nullptr);
+    tempoSyncAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("tempoSync"), *tempoSyncRelay, nullptr);
 
     // Add WebView to editor
     addAndMakeVisible(*webView);
@@ -60,8 +50,8 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     // Navigate to UI
     webView->goToURL(juce::WebBrowserComponent::getResourceProviderRoot());
 
-    // Set editor size (800x700 - wider and taller for bypass controls)
-    setSize(800, 700);
+    // Set editor size
+    setSize(800, 600);
 }
 
 RedShiftDistortionAudioProcessorEditor::~RedShiftDistortionAudioProcessorEditor()

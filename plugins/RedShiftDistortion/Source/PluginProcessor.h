@@ -36,24 +36,17 @@ private:
     // Parameter layout creation
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    // DSP Components (BEFORE parameters for initialization order)
+    // DSP Components
     juce::dsp::ProcessSpec spec;
 
-    // Delay components - Stereo delay lines for L/R doppler effect
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLineLeft;
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLineRight;
+    // Main delay line (for delayTime parameter)
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> mainDelayLine;
 
-    // Feedback buffer (stores delayed signal for feedback loop)
-    juce::AudioBuffer<float> feedbackBuffer;
+    // Delay path buffer (for parallel processing)
+    juce::AudioBuffer<float> delayPathBuffer;
 
-    // Tape delay feedback filters (hi-cut and lo-cut)
-    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> hiCutFilter;
-    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> loCutFilter;
-
-    // Doppler control smoothing (avoid clicks)
-    float currentDopplerControl { 0.0f };
-
-    // Helper methods (none needed)
+    // Helper methods
+    float getTempoSyncedDelayTime(float delayTimeParam, bool tempoSyncEnabled);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RedShiftDistortionAudioProcessor)
 };
