@@ -138,8 +138,36 @@ RedShiftDistortionAudioProcessor::~RedShiftDistortionAudioProcessor()
 
 void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // DSP initialization will be added in Stage 2 (Phase 2.1+)
-    juce::ignoreUnused(sampleRate, samplesPerBlock);
+    // Create ProcessSpec for juce::dsp components (Pattern #17)
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+    spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
+
+    // Calculate stereo width smoothing coefficient (10ms time constant)
+    const float smoothingTimeMs = 10.0f;
+    stereoSmoothingCoeff = 1.0f - std::exp(-1.0f / (smoothingTimeMs * 0.001f * static_cast<float>(sampleRate)));
+
+    // Calculate maximum delay in samples
+    const int maxStereoWidthDelaySamples = static_cast<int>(std::ceil((ITD_HALF_MS / 1000.0f) * sampleRate));
+    const int maxTapeDelaySamples = static_cast<int>(std::ceil((MAX_DELAY_MS / 1000.0f) * sampleRate));
+
+    // Initialize stereo width delay lines (Stage 1)
+    stereoWidthDelayLeft.prepare(spec);
+    stereoWidthDelayLeft.setMaximumDelayInSamples(maxStereoWidthDelaySamples);
+    stereoWidthDelayLeft.reset();
+
+    stereoWidthDelayRight.prepare(spec);
+    stereoWidthDelayRight.setMaximumDelayInSamples(maxStereoWidthDelaySamples);
+    stereoWidthDelayRight.reset();
+
+    // Initialize tape delay line (Stage 2)
+    tapeDelay.prepare(spec);
+    tapeDelay.setMaximumDelayInSamples(maxTapeDelaySamples);
+    tapeDelay.reset();
+
+    // Reset smoothed control
+    smoothedStereoControl = 0.0f;
 }
 
 void RedShiftDistortionAudioProcessor::releaseResources()
@@ -152,12 +180,81 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     juce::ScopedNoDenormals noDenormals;
     juce::ignoreUnused(midiMessages);
 
-    // Parameter access example (for future Stage 2 DSP implementation):
-    // auto* stereoWidthParam = parameters.getRawParameterValue("STEREO_WIDTH");
-    // float stereoWidthValue = stereoWidthParam->load();  // Atomic read (real-time safe)
+    const int numSamples = buffer.getNumSamples();
+    const int numChannels = buffer.getNumChannels();
 
-    // Pass-through for Stage 1 (DSP implementation happens in Stage 2)
-    // Audio routing is already handled by JUCE (input → output)
+    // Early exit if no channels
+    if (numChannels == 0 || numSamples == 0)
+        return;
+
+    // Read parameters (atomic, real-time safe)
+    const float stereoWidthParam = parameters.getRawParameterValue("STEREO_WIDTH")->load();
+    const bool bypassStereoWidth = parameters.getRawParameterValue("BYPASS_STEREO_WIDTH")->load() > 0.5f;
+    const bool bypassDelay = parameters.getRawParameterValue("BYPASS_DELAY")->load() > 0.5f;
+    const float masterOutputDb = parameters.getRawParameterValue("MASTER_OUTPUT")->load();
+
+    // Calculate target stereo control (-1.0 to +1.0)
+    const float targetStereoControl = bypassStereoWidth ? 0.0f : (stereoWidthParam / 100.0f);
+
+    // Calculate master output gain (dB to linear)
+    const float masterGain = std::pow(10.0f, masterOutputDb / 20.0f);
+
+    // Get sample rate for delay time calculations
+    const float sampleRate = static_cast<float>(getSampleRate());
+
+    // Process each sample
+    for (int sample = 0; sample < numSamples; ++sample)
+    {
+        // Smooth stereo control (exponential smoothing, 10ms time constant)
+        smoothedStereoControl += (targetStereoControl - smoothedStereoControl) * stereoSmoothingCoeff;
+
+        // Calculate L/R delay times (ITD_HALF = 260ms maximum)
+        const float stereoDelayTimeSamples = (ITD_HALF_MS / 1000.0f) * sampleRate * smoothedStereoControl;
+        const float leftDelaySamples = stereoDelayTimeSamples;   // Positive offset
+        const float rightDelaySamples = -stereoDelayTimeSamples;  // Negative offset (opposite)
+
+        // STAGE 1: Stereo Width Modulation
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            float* channelData = buffer.getWritePointer(ch);
+            const float input = channelData[sample];
+
+            if (ch == 0)  // Left channel
+            {
+                stereoWidthDelayLeft.pushSample(0, input);
+                stereoWidthDelayLeft.setDelay(std::abs(leftDelaySamples));
+                channelData[sample] = stereoWidthDelayLeft.popSample(0);
+            }
+            else if (ch == 1)  // Right channel
+            {
+                stereoWidthDelayRight.pushSample(0, input);
+                stereoWidthDelayRight.setDelay(std::abs(rightDelaySamples));
+                channelData[sample] = stereoWidthDelayRight.popSample(0);
+            }
+        }
+
+        // STAGE 2: Tape Delay (basic pass-through for Phase 2.1, no feedback yet)
+        if (!bypassDelay)
+        {
+            for (int ch = 0; ch < numChannels; ++ch)
+            {
+                float* channelData = buffer.getWritePointer(ch);
+                const float stereoWidthOutput = channelData[sample];
+
+                // Push to delay line, pop immediately (0ms delay = pass-through)
+                tapeDelay.pushSample(ch, stereoWidthOutput);
+                tapeDelay.setDelay(0.0f);  // No delay yet (Phase 2.3 will add feedback)
+                channelData[sample] = tapeDelay.popSample(ch);
+            }
+        }
+
+        // STAGE 5: Master Output Gain
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            float* channelData = buffer.getWritePointer(ch);
+            channelData[sample] *= masterGain;
+        }
+    }
 }
 
 juce::AudioProcessorEditor* RedShiftDistortionAudioProcessor::createEditor()
