@@ -22,16 +22,11 @@ private:
     std::unique_ptr<juce::WebSliderRelay> saturationRelay;
     std::unique_ptr<juce::WebSliderRelay> dopplerShiftRelay;
     std::unique_ptr<juce::WebSliderRelay> feedbackRelay;
-    std::unique_ptr<juce::WebSliderRelay> filterBandHighRelay;
-    std::unique_ptr<juce::WebSliderRelay> filterBandLowRelay;
-    std::unique_ptr<juce::WebSliderRelay> lfoRateRelay;
-    std::unique_ptr<juce::WebSliderRelay> lfoDepthRelay;
-    std::unique_ptr<juce::WebSliderRelay> distortionLevelRelay;
+    std::unique_ptr<juce::WebSliderRelay> hiCutRelay;
+    std::unique_ptr<juce::WebSliderRelay> loCutRelay;
     std::unique_ptr<juce::WebSliderRelay> masterOutputRelay;
-    std::unique_ptr<juce::WebToggleButtonRelay> reverseRelay;
     std::unique_ptr<juce::WebToggleButtonRelay> bypassSaturationRelay;
     std::unique_ptr<juce::WebToggleButtonRelay> bypassDopplerRelay;
-    std::unique_ptr<juce::WebToggleButtonRelay> lfoTempoSyncRelay;
 
     // 2️⃣ WEBVIEW SECOND (depends on relays via withOptionsFrom)
     std::unique_ptr<juce::WebBrowserComponent> webView;
@@ -40,16 +35,11 @@ private:
     std::unique_ptr<juce::WebSliderParameterAttachment> saturationAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> dopplerShiftAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> feedbackAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment> filterBandHighAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment> filterBandLowAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment> lfoRateAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment> lfoDepthAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment> distortionLevelAttachment;
+    std::unique_ptr<juce::WebSliderParameterAttachment> hiCutAttachment;
+    std::unique_ptr<juce::WebSliderParameterAttachment> loCutAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment> masterOutputAttachment;
-    std::unique_ptr<juce::WebToggleButtonParameterAttachment> reverseAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> bypassSaturationAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> bypassDopplerAttachment;
-    std::unique_ptr<juce::WebToggleButtonParameterAttachment> lfoTempoSyncAttachment;
 
     // Helper for resource serving
     std::optional<juce::WebBrowserComponent::Resource> getResource(const juce::String& url);

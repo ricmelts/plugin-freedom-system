@@ -38,25 +38,6 @@
                 </div>
                 <div class="value-display" id="dopplerShift-value">0.0 %</div>
             </div>
-
-            <!-- Distortion Level Control -->
-            <div class="control-group">
-                <label for="distortionLevel">Distortion Level</label>
-                <div class="knob" id="distortionLevel" data-param="distortionLevel">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="distortionLevel-value">-6.0 dB</div>
-            </div>
-
-            <!-- Reverse Toggle -->
-            <div class="control-group">
-                <label for="reverse">Reverse Playback</label>
-                <div class="toggle-switch" id="reverse" data-param="reverse">
-                    <div class="toggle-track"></div>
-                    <div class="toggle-thumb"></div>
-                </div>
-            </div>
         </div>
 
         <!-- Mixer Section -->
@@ -73,53 +54,24 @@
                 <div class="value-display" id="feedback-value">0.0 %</div>
             </div>
 
-            <!-- Filter Band High (Lowpass - Tape Delay Filter) -->
+            <!-- Hi Cut (Tape Delay Filter) -->
             <div class="control-group">
-                <label for="filterBandHigh">Hi Cut</label>
-                <div class="knob" id="filterBandHigh" data-param="filterBandHigh">
+                <label for="hiCut">Hi Cut</label>
+                <div class="knob" id="hiCut" data-param="hiCut">
                     <div class="knob-track"></div>
                     <div class="knob-indicator"></div>
                 </div>
-                <div class="value-display" id="filterBandHigh-value">8000 Hz</div>
+                <div class="value-display" id="hiCut-value">8000 Hz</div>
             </div>
 
-            <!-- Filter Band Low (Highpass - Tape Delay Filter) -->
+            <!-- Lo Cut (Tape Delay Filter) -->
             <div class="control-group">
-                <label for="filterBandLow">Lo Cut</label>
-                <div class="knob" id="filterBandLow" data-param="filterBandLow">
+                <label for="loCut">Lo Cut</label>
+                <div class="knob" id="loCut" data-param="loCut">
                     <div class="knob-track"></div>
                     <div class="knob-indicator"></div>
                 </div>
-                <div class="value-display" id="filterBandLow-value">100 Hz</div>
-            </div>
-
-            <!-- LFO Rate -->
-            <div class="control-group">
-                <label for="lfoRate">LFO Rate</label>
-                <div class="knob" id="lfoRate" data-param="lfoRate">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="lfoRate-value">1.0 Hz</div>
-            </div>
-
-            <!-- LFO Tempo Sync -->
-            <div class="control-group">
-                <label for="lfoTempoSync">LFO Tempo Sync</label>
-                <div class="toggle-switch" id="lfoTempoSync" data-param="lfoTempoSync">
-                    <div class="toggle-track"></div>
-                    <div class="toggle-thumb"></div>
-                </div>
-            </div>
-
-            <!-- LFO Depth -->
-            <div class="control-group">
-                <label for="lfoDepth">LFO Depth</label>
-                <div class="knob" id="lfoDepth" data-param="lfoDepth">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="lfoDepth-value">20.0 %</div>
+                <div class="value-display" id="loCut-value">100 Hz</div>
             </div>
 
             <!-- Master Output -->
