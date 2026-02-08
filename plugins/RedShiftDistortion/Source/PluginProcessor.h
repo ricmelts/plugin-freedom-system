@@ -43,8 +43,11 @@ private:
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoWidthDelayLeft;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoWidthDelayRight;
 
-    // Stage 2: Tape Delay (basic pass-through for Phase 2.1, feedback added in Phase 2.3)
+    // Stage 2: Tape Delay (with feedback loop - Phase 2.3)
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelay;
+
+    // Feedback buffer (stores filtered feedback signal for next iteration)
+    juce::AudioBuffer<float> feedbackBuffer;
 
     // Stereo width smoothing (exponential smoothing, 10ms time constant)
     float smoothedStereoControl = 0.0f;

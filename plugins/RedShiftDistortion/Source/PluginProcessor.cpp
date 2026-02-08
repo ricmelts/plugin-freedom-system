@@ -171,6 +171,10 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     // Reset smoothed control
     smoothedStereoControl = 0.0f;
 
+    // Initialize feedback buffer (Phase 2.3)
+    feedbackBuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
+    feedbackBuffer.clear();
+
     // Initialize granular engines for both channels (Phase 2.2)
     for (auto& engine : grainEngines)
     {
@@ -200,7 +204,8 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
 
 void RedShiftDistortionAudioProcessor::releaseResources()
 {
-    // Cleanup will be added in Stage 2 (Phase 2.1+)
+    // Clear feedback buffer (Phase 2.3)
+    feedbackBuffer.setSize(0, 0);
 }
 
 void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -215,20 +220,28 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     if (numChannels == 0 || numSamples == 0)
         return;
 
+    // Resize feedback buffer if block size changed
+    if (feedbackBuffer.getNumSamples() != numSamples)
+    {
+        feedbackBuffer.setSize(numChannels, numSamples, false, false, true);
+    }
+
     // Read parameters (atomic, real-time safe)
     const float stereoWidthParam = parameters.getRawParameterValue("STEREO_WIDTH")->load();
     const bool bypassStereoWidth = parameters.getRawParameterValue("BYPASS_STEREO_WIDTH")->load() > 0.5f;
     const bool bypassDelay = parameters.getRawParameterValue("BYPASS_DELAY")->load() > 0.5f;
-    const float masterOutputDb = parameters.getRawParameterValue("MASTER_OUTPUT")->load();
-
-    // Granular parameters (Phase 2.2)
+    const bool bypassDoppler = parameters.getRawParameterValue("BYPASS_DOPPLER")->load() > 0.5f;
+    const float feedbackParam = parameters.getRawParameterValue("FEEDBACK")->load();
     const float dopplerShiftParam = parameters.getRawParameterValue("DOPPLER_SHIFT")->load();
     const float grainSizeMs = parameters.getRawParameterValue("GRAIN_SIZE")->load();
     const int grainOverlapIndex = static_cast<int>(parameters.getRawParameterValue("GRAIN_OVERLAP")->load());
-    const bool bypassDoppler = parameters.getRawParameterValue("BYPASS_DOPPLER")->load() > 0.5f;
+    const float masterOutputDb = parameters.getRawParameterValue("MASTER_OUTPUT")->load();
 
     // Calculate target stereo control (-1.0 to +1.0)
     const float targetStereoControl = bypassStereoWidth ? 0.0f : (stereoWidthParam / 100.0f);
+
+    // Calculate feedback gain (0-95% → 0.0-0.95)
+    const float feedbackGain = feedbackParam / 100.0f;
 
     // Calculate master output gain (dB to linear)
     const float masterGain = std::pow(10.0f, masterOutputDb / 20.0f);
@@ -251,113 +264,30 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     // Process each sample
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        // Smooth stereo control (exponential smoothing, 10ms time constant)
-        smoothedStereoControl += (targetStereoControl - smoothedStereoControl) * stereoSmoothingCoeff;
-
-        // Calculate L/R delay times (ITD_HALF = 260ms maximum)
-        const float stereoDelayTimeSamples = (ITD_HALF_MS / 1000.0f) * sampleRate * smoothedStereoControl;
-        const float leftDelaySamples = stereoDelayTimeSamples;   // Positive offset
-        const float rightDelaySamples = -stereoDelayTimeSamples;  // Negative offset (opposite)
-
         // STAGE 1: Stereo Width Modulation
+        smoothedStereoControl += (targetStereoControl - smoothedStereoControl) * stereoSmoothingCoeff;
+        const float stereoDelayTimeSamples = (ITD_HALF_MS / 1000.0f) * currentSampleRate * smoothedStereoControl;
+
         for (int ch = 0; ch < numChannels; ++ch)
         {
             float* channelData = buffer.getWritePointer(ch);
             const float input = channelData[sample];
 
-            if (ch == 0)  // Left channel
+            if (ch == 0)  // Left
             {
                 stereoWidthDelayLeft.pushSample(0, input);
-                stereoWidthDelayLeft.setDelay(std::abs(leftDelaySamples));
+                stereoWidthDelayLeft.setDelay(std::abs(stereoDelayTimeSamples));
                 channelData[sample] = stereoWidthDelayLeft.popSample(0);
             }
-            else if (ch == 1)  // Right channel
+            else if (ch == 1)  // Right
             {
                 stereoWidthDelayRight.pushSample(0, input);
-                stereoWidthDelayRight.setDelay(std::abs(rightDelaySamples));
+                stereoWidthDelayRight.setDelay(std::abs(-stereoDelayTimeSamples));
                 channelData[sample] = stereoWidthDelayRight.popSample(0);
             }
         }
 
-        // STAGE 3: Granular Pitch Shifter (Phase 2.2 - isolated testing)
-        if (!bypassDoppler && std::abs(pitchRatio - 1.0f) > 0.001f)  // Only process if pitch shift active
-        {
-            for (int ch = 0; ch < numChannels; ++ch)
-            {
-                float* channelData = buffer.getWritePointer(ch);
-                const float stereoWidthOutput = channelData[sample];
-                auto& engine = grainEngines[ch];
-
-                // Write to grain buffer (circular)
-                engine.grainBuffer[engine.grainBufferWritePos] = stereoWidthOutput;
-                engine.grainBufferWritePos = (engine.grainBufferWritePos + 1) % actualGrainSize;
-
-                // Update grain advance counter
-                engine.grainAdvanceSamples = grainAdvanceSamples;
-
-                // Spawn new grain if needed
-                if (engine.samplesUntilNextGrain <= 0)
-                {
-                    // Find inactive grain slot
-                    for (auto& grain : engine.grains)
-                    {
-                        if (!grain.active)
-                        {
-                            grain.active = true;
-                            grain.readPosition = 0.0f;
-                            grain.grainPhase = 0;
-                            break;
-                        }
-                    }
-
-                    // Reset spawn counter
-                    engine.samplesUntilNextGrain = grainAdvanceSamples;
-                }
-                engine.samplesUntilNextGrain--;
-
-                // Overlap-add all active grains
-                float grainOutput = 0.0f;
-                for (auto& grain : engine.grains)
-                {
-                    if (!grain.active)
-                        continue;
-
-                    // Read from grain buffer at fractional position (linear interpolation)
-                    const int readPosInt = static_cast<int>(grain.readPosition);
-                    const float readPosFrac = grain.readPosition - static_cast<float>(readPosInt);
-
-                    const int idx0 = readPosInt % actualGrainSize;
-                    const int idx1 = (readPosInt + 1) % actualGrainSize;
-
-                    const float sample0 = engine.grainBuffer[idx0];
-                    const float sample1 = engine.grainBuffer[idx1];
-                    const float grainSample = sample0 + readPosFrac * (sample1 - sample0);
-
-                    // Apply Hann window
-                    const float windowPhase = static_cast<float>(grain.grainPhase) / static_cast<float>(actualGrainSize);
-                    const int windowIdx = static_cast<int>(windowPhase * static_cast<float>(GrainEngine::MAX_GRAIN_SIZE_SAMPLES));
-                    const float windowValue = engine.hannWindow[windowIdx];
-
-                    grainOutput += grainSample * windowValue;
-
-                    // Advance grain playback (variable rate for pitch shifting)
-                    grain.readPosition += pitchRatio;
-                    grain.grainPhase++;
-
-                    // Deactivate grain when complete
-                    if (grain.grainPhase >= actualGrainSize)
-                    {
-                        grain.active = false;
-                    }
-                }
-
-                // Normalize output by number of overlapping grains
-                const float normalizationFactor = 1.0f / static_cast<float>(grainOverlap);
-                channelData[sample] = grainOutput * normalizationFactor;
-            }
-        }
-
-        // STAGE 2: Tape Delay (basic pass-through for Phase 2.1, no feedback yet)
+        // STAGE 2: Tape Delay with Feedback Loop (Phase 2.3 - cumulative doppler)
         if (!bypassDelay)
         {
             for (int ch = 0; ch < numChannels; ++ch)
@@ -365,10 +295,90 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
                 float* channelData = buffer.getWritePointer(ch);
                 const float stereoWidthOutput = channelData[sample];
 
-                // Push to delay line, pop immediately (0ms delay = pass-through)
-                tapeDelay.pushSample(ch, stereoWidthOutput);
-                tapeDelay.setDelay(0.0f);  // No delay yet (Phase 2.3 will add feedback)
-                channelData[sample] = tapeDelay.popSample(ch);
+                // Add previous feedback to input
+                const float delayInput = stereoWidthOutput + (feedbackBuffer.getSample(ch, sample) * feedbackGain);
+
+                // Write to delay line
+                tapeDelay.pushSample(ch, delayInput);
+                tapeDelay.setDelay(0.0f);  // Still 0ms for now (Phase 2.4 will add adjustable delay time)
+
+                // Read delayed signal
+                float delayedSignal = tapeDelay.popSample(ch);
+
+                // STAGE 3: Granular Pitch Shifter (INSIDE FEEDBACK LOOP - CUMULATIVE)
+                if (!bypassDoppler && std::abs(pitchRatio - 1.0f) > 0.001f)
+                {
+                    auto& engine = grainEngines[ch];
+
+                    // Write delayed signal to grain buffer
+                    engine.grainBuffer[engine.grainBufferWritePos] = delayedSignal;
+                    engine.grainBufferWritePos = (engine.grainBufferWritePos + 1) % actualGrainSize;
+
+                    // Update grain advance
+                    engine.grainAdvanceSamples = grainAdvanceSamples;
+
+                    // Spawn new grain if needed
+                    if (engine.samplesUntilNextGrain <= 0)
+                    {
+                        for (auto& grain : engine.grains)
+                        {
+                            if (!grain.active)
+                            {
+                                grain.active = true;
+                                grain.readPosition = 0.0f;
+                                grain.grainPhase = 0;
+                                break;
+                            }
+                        }
+                        engine.samplesUntilNextGrain = grainAdvanceSamples;
+                    }
+                    engine.samplesUntilNextGrain--;
+
+                    // Overlap-add all active grains
+                    float grainOutput = 0.0f;
+                    for (auto& grain : engine.grains)
+                    {
+                        if (!grain.active)
+                            continue;
+
+                        // Read with linear interpolation
+                        const int readPosInt = static_cast<int>(grain.readPosition);
+                        const float readPosFrac = grain.readPosition - static_cast<float>(readPosInt);
+
+                        const int idx0 = readPosInt % actualGrainSize;
+                        const int idx1 = (readPosInt + 1) % actualGrainSize;
+
+                        const float sample0 = engine.grainBuffer[idx0];
+                        const float sample1 = engine.grainBuffer[idx1];
+                        const float grainSample = sample0 + readPosFrac * (sample1 - sample0);
+
+                        // Apply Hann window
+                        const float windowPhase = static_cast<float>(grain.grainPhase) / static_cast<float>(actualGrainSize);
+                        const int windowIdx = static_cast<int>(windowPhase * static_cast<float>(GrainEngine::MAX_GRAIN_SIZE_SAMPLES));
+                        const float windowValue = engine.hannWindow[windowIdx];
+
+                        grainOutput += grainSample * windowValue;
+
+                        // Advance grain
+                        grain.readPosition += pitchRatio;
+                        grain.grainPhase++;
+
+                        if (grain.grainPhase >= actualGrainSize)
+                        {
+                            grain.active = false;
+                        }
+                    }
+
+                    // Normalize and update delayed signal
+                    const float normalizationFactor = 1.0f / static_cast<float>(grainOverlap);
+                    delayedSignal = grainOutput * normalizationFactor;
+                }
+
+                // Store processed signal in feedback buffer for next iteration
+                feedbackBuffer.setSample(ch, sample, delayedSignal);
+
+                // Output delayed+pitched signal (wet signal)
+                channelData[sample] = delayedSignal;
             }
         }
 
