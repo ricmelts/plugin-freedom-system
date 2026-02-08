@@ -175,6 +175,17 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     feedbackBuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
     feedbackBuffer.clear();
 
+    // Initialize feedback filters (Phase 2.4)
+    feedbackLoCutFilterLeft.prepare(spec);
+    feedbackLoCutFilterRight.prepare(spec);
+    feedbackHiCutFilterLeft.prepare(spec);
+    feedbackHiCutFilterRight.prepare(spec);
+
+    feedbackLoCutFilterLeft.reset();
+    feedbackLoCutFilterRight.reset();
+    feedbackHiCutFilterLeft.reset();
+    feedbackHiCutFilterRight.reset();
+
     // Initialize granular engines for both channels (Phase 2.2)
     for (auto& engine : grainEngines)
     {
@@ -231,10 +242,14 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     const bool bypassStereoWidth = parameters.getRawParameterValue("BYPASS_STEREO_WIDTH")->load() > 0.5f;
     const bool bypassDelay = parameters.getRawParameterValue("BYPASS_DELAY")->load() > 0.5f;
     const bool bypassDoppler = parameters.getRawParameterValue("BYPASS_DOPPLER")->load() > 0.5f;
+    const bool bypassSaturation = parameters.getRawParameterValue("BYPASS_SATURATION")->load() > 0.5f;
     const float feedbackParam = parameters.getRawParameterValue("FEEDBACK")->load();
     const float dopplerShiftParam = parameters.getRawParameterValue("DOPPLER_SHIFT")->load();
     const float grainSizeMs = parameters.getRawParameterValue("GRAIN_SIZE")->load();
     const int grainOverlapIndex = static_cast<int>(parameters.getRawParameterValue("GRAIN_OVERLAP")->load());
+    const float saturationDb = parameters.getRawParameterValue("SATURATION")->load();
+    const float filterBandLow = parameters.getRawParameterValue("FILTER_BAND_LOW")->load();
+    const float filterBandHigh = parameters.getRawParameterValue("FILTER_BAND_HIGH")->load();
     const float masterOutputDb = parameters.getRawParameterValue("MASTER_OUTPUT")->load();
 
     // Calculate target stereo control (-1.0 to +1.0)
@@ -243,8 +258,17 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     // Calculate feedback gain (0-95% → 0.0-0.95)
     const float feedbackGain = feedbackParam / 100.0f;
 
+    // Calculate saturation gain (dB to linear, Phase 2.4)
+    const float saturationGain = std::pow(10.0f, saturationDb / 20.0f);
+
     // Calculate master output gain (dB to linear)
     const float masterGain = std::pow(10.0f, masterOutputDb / 20.0f);
+
+    // Update filter coefficients (Phase 2.4 - once per buffer to save CPU)
+    *feedbackLoCutFilterLeft.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass(currentSampleRate, filterBandLow);
+    *feedbackLoCutFilterRight.coefficients = *feedbackLoCutFilterLeft.coefficients;
+    *feedbackHiCutFilterLeft.coefficients = *juce::dsp::IIR::Coefficients<float>::makeLowPass(currentSampleRate, filterBandHigh);
+    *feedbackHiCutFilterRight.coefficients = *feedbackHiCutFilterLeft.coefficients;
 
     // Get sample rate for delay time calculations
     const float sampleRate = static_cast<float>(getSampleRate());
@@ -372,6 +396,34 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
                     // Normalize and update delayed signal
                     const float normalizationFactor = 1.0f / static_cast<float>(grainOverlap);
                     delayedSignal = grainOutput * normalizationFactor;
+                }
+
+                // STAGE 4: Tube Saturation (AFTER granular, BEFORE filters, Phase 2.4)
+                if (!bypassSaturation)
+                {
+                    // Apply tanh waveshaping with adjustable drive
+                    delayedSignal = std::tanh(saturationGain * delayedSignal);
+                }
+
+                // STAGE 2 (continued): Feedback Filters (AFTER saturation, Phase 2.4)
+                // Apply lo-cut (highpass) filter
+                if (ch == 0)
+                {
+                    delayedSignal = feedbackLoCutFilterLeft.processSample(delayedSignal);
+                }
+                else if (ch == 1)
+                {
+                    delayedSignal = feedbackLoCutFilterRight.processSample(delayedSignal);
+                }
+
+                // Apply hi-cut (lowpass) filter
+                if (ch == 0)
+                {
+                    delayedSignal = feedbackHiCutFilterLeft.processSample(delayedSignal);
+                }
+                else if (ch == 1)
+                {
+                    delayedSignal = feedbackHiCutFilterRight.processSample(delayedSignal);
                 }
 
                 // Store processed signal in feedback buffer for next iteration

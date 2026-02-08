@@ -53,6 +53,14 @@ private:
     float smoothedStereoControl = 0.0f;
     float stereoSmoothingCoeff = 0.0f;  // Calculated in prepareToPlay
 
+    // Feedback filters (Stage 2 - feedback path, Phase 2.4)
+    using IIRFilter = juce::dsp::IIR::Filter<float>;
+
+    IIRFilter feedbackLoCutFilterLeft;   // Highpass (removes low frequencies)
+    IIRFilter feedbackLoCutFilterRight;
+    IIRFilter feedbackHiCutFilterLeft;   // Lowpass (removes high frequencies)
+    IIRFilter feedbackHiCutFilterRight;
+
     // Stage 3: Granular Pitch Shifter (Phase 2.2 - isolated testing)
     struct GrainEngine
     {
