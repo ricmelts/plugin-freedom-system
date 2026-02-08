@@ -1,164 +1,282 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RedShiftDistortion</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
 
-    <!-- JUCE WebView Bridge -->
-    <script type="module" src="js/juce/index.js"></script>
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 20px;
+            gap: 15px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 10px 0;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section h2 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #667eea;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .param-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .param {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .param label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .param input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .param input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .param input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .param .value {
+            font-size: 13px;
+            color: #fff;
+            font-weight: 600;
+            min-height: 20px;
+        }
+
+        .bypass-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .bypass-btn {
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+        }
+
+        .bypass-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .bypass-btn.active {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            border-color: #ff6b6b;
+            color: #fff;
+        }
+
+        .advanced-section {
+            margin-top: auto;
+        }
+    </style>
 </head>
 <body>
-    <div class="plugin-container">
-        <!-- Header -->
+    <div class="container">
         <div class="header">
             <h1>RedShiftDistortion</h1>
-            <p class="subtitle">Parallel Delay & Tube Distortion with Doppler Effects</p>
         </div>
 
-        <!-- Main Controls Section -->
-        <div class="controls-section">
-            <!-- Saturation Control -->
-            <div class="control-group">
-                <label for="saturation">Saturation</label>
-                <div class="knob" id="saturation" data-param="saturation">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="saturation-value">0.0 dB</div>
-            </div>
-
-            <!-- Doppler Shift Control -->
-            <div class="control-group">
-                <label for="dopplerShift">Doppler Shift</label>
-                <div class="knob" id="dopplerShift" data-param="dopplerShift">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="dopplerShift-value">0.0 %</div>
-            </div>
-
-            <!-- Distortion Level Control -->
-            <div class="control-group">
-                <label for="distortionLevel">Distortion Level</label>
-                <div class="knob" id="distortionLevel" data-param="distortionLevel">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="distortionLevel-value">-6.0 dB</div>
-            </div>
-
-            <!-- Reverse Toggle -->
-            <div class="control-group">
-                <label for="reverse">Reverse Playback</label>
-                <div class="toggle-switch" id="reverse" data-param="reverse">
-                    <div class="toggle-track"></div>
-                    <div class="toggle-thumb"></div>
-                </div>
-            </div>
+        <div class="section">
+            <h2>Main Controls</h2>
+            <div class="param-grid" id="mainControls"></div>
         </div>
 
-        <!-- Mixer Section -->
-        <div class="mixer-section">
-            <h2>Parallel Mix</h2>
-
-            <!-- Feedback -->
-            <div class="control-group">
-                <label for="feedback">Feedback</label>
-                <div class="knob" id="feedback" data-param="feedback">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="feedback-value">0.0 %</div>
-            </div>
-
-            <!-- Filter Band High (Lowpass - Tape Delay Filter) -->
-            <div class="control-group">
-                <label for="filterBandHigh">Hi Cut</label>
-                <div class="knob" id="filterBandHigh" data-param="filterBandHigh">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="filterBandHigh-value">8000 Hz</div>
-            </div>
-
-            <!-- Filter Band Low (Highpass - Tape Delay Filter) -->
-            <div class="control-group">
-                <label for="filterBandLow">Lo Cut</label>
-                <div class="knob" id="filterBandLow" data-param="filterBandLow">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="filterBandLow-value">100 Hz</div>
-            </div>
-
-            <!-- LFO Rate -->
-            <div class="control-group">
-                <label for="lfoRate">LFO Rate</label>
-                <div class="knob" id="lfoRate" data-param="lfoRate">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="lfoRate-value">1.0 Hz</div>
-            </div>
-
-            <!-- LFO Tempo Sync -->
-            <div class="control-group">
-                <label for="lfoTempoSync">LFO Tempo Sync</label>
-                <div class="toggle-switch" id="lfoTempoSync" data-param="lfoTempoSync">
-                    <div class="toggle-track"></div>
-                    <div class="toggle-thumb"></div>
-                </div>
-            </div>
-
-            <!-- LFO Depth -->
-            <div class="control-group">
-                <label for="lfoDepth">LFO Depth</label>
-                <div class="knob" id="lfoDepth" data-param="lfoDepth">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="lfoDepth-value">20.0 %</div>
-            </div>
-
-            <!-- Master Output -->
-            <div class="control-group">
-                <label for="masterOutput">Master Output</label>
-                <div class="knob" id="masterOutput" data-param="masterOutput">
-                    <div class="knob-track"></div>
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="value-display" id="masterOutput-value">0.0 dB</div>
-            </div>
+        <div class="section">
+            <h2>Bypass Controls</h2>
+            <div class="bypass-grid" id="bypassControls"></div>
         </div>
 
-        <!-- Bypass Controls (Troubleshooting) -->
-        <div class="bypass-section">
-            <h2>Bypass (Troubleshooting)</h2>
-            <div class="bypass-toggles-row">
-                <!-- Bypass Saturation -->
-                <div class="toggle-group">
-                    <label for="bypassSaturation">Bypass Saturation</label>
-                    <div class="toggle-switch" id="bypassSaturation" data-param="bypassSaturation">
-                        <div class="toggle-track"></div>
-                        <div class="toggle-thumb"></div>
-                    </div>
-                </div>
-
-                <!-- Bypass Doppler -->
-                <div class="toggle-group">
-                    <label for="bypassDoppler">Bypass Doppler</label>
-                    <div class="toggle-switch" id="bypassDoppler" data-param="bypassDoppler">
-                        <div class="toggle-track"></div>
-                        <div class="toggle-thumb"></div>
-                    </div>
-                </div>
-            </div>
+        <div class="section advanced-section">
+            <h2>Advanced Settings</h2>
+            <div class="param-grid" id="advancedControls"></div>
         </div>
     </div>
 
-    <!-- Main Application Script -->
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/juce/index.js"></script>
+    <script type="module">
+        import { getSliderState, getToggleState } from './js/juce/index.js';
+
+        // Main controls (7 sliders)
+        const mainParams = [
+            { id: 'STEREO_WIDTH', label: 'Stereo Width', unit: '%', format: (v) => v.toFixed(1) },
+            { id: 'FEEDBACK', label: 'Feedback', unit: '%', format: (v) => v.toFixed(1) },
+            { id: 'FILTER_BAND_LOW', label: 'Lo-Cut', unit: 'Hz', format: (v) => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v.toFixed(0) },
+            { id: 'FILTER_BAND_HIGH', label: 'Hi-Cut', unit: 'Hz', format: (v) => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v.toFixed(0) },
+            { id: 'DOPPLER_SHIFT', label: 'Doppler Shift', unit: '%', format: (v) => v.toFixed(1) },
+            { id: 'SATURATION', label: 'Saturation', unit: 'dB', format: (v) => v.toFixed(1) },
+            { id: 'MASTER_OUTPUT', label: 'Master Output', unit: 'dB', format: (v) => v.toFixed(1) }
+        ];
+
+        // Bypass controls (4 toggles)
+        const bypassParams = [
+            { id: 'BYPASS_STEREO_WIDTH', label: 'Bypass Stereo Width' },
+            { id: 'BYPASS_DELAY', label: 'Bypass Delay' },
+            { id: 'BYPASS_DOPPLER', label: 'Bypass Doppler' },
+            { id: 'BYPASS_SATURATION', label: 'Bypass Saturation' }
+        ];
+
+        // Advanced controls (2 sliders)
+        const advancedParams = [
+            { id: 'GRAIN_SIZE', label: 'Grain Size', unit: 'ms', format: (v) => v.toFixed(0) },
+            { id: 'GRAIN_OVERLAP', label: 'Grain Overlap', unit: '', format: (v) => v === 0 ? '2x' : '4x' }
+        ];
+
+        // Create slider UI elements
+        function createSliderParam(param, container) {
+            const state = getSliderState(param.id);
+            const div = document.createElement('div');
+            div.className = 'param';
+            div.innerHTML = `
+                <label>${param.label}</label>
+                <input type="range" min="0" max="1" step="0.001" value="${state.getNormalisedValue()}">
+                <div class="value"></div>
+            `;
+            container.appendChild(div);
+
+            const slider = div.querySelector('input');
+            const valueDisplay = div.querySelector('.value');
+
+            const updateDisplay = () => {
+                const value = state.getValue();
+                const formatted = param.format ? param.format(value) : value.toFixed(2);
+                valueDisplay.textContent = `${formatted} ${param.unit}`;
+            };
+
+            slider.addEventListener('input', (e) => {
+                state.setNormalisedValue(parseFloat(e.target.value));
+            });
+
+            state.valueChangedEvent.addListener(() => {
+                slider.value = state.getNormalisedValue();
+                updateDisplay();
+            });
+
+            updateDisplay();
+        }
+
+        // Create toggle button elements
+        function createToggleParam(param, container) {
+            const state = getToggleState(param.id);
+            const button = document.createElement('button');
+            button.className = 'bypass-btn';
+            button.textContent = param.label;
+            container.appendChild(button);
+
+            const updateButton = () => {
+                const value = state.getValue();
+                button.classList.toggle('active', value);
+            };
+
+            button.addEventListener('click', () => {
+                state.setValue(!state.getValue());
+            });
+
+            state.valueChangedEvent.addListener(() => {
+                updateButton();
+            });
+
+            updateButton();
+        }
+
+        // Initialize all parameters
+        const mainContainer = document.getElementById('mainControls');
+        mainParams.forEach(param => createSliderParam(param, mainContainer));
+
+        const bypassContainer = document.getElementById('bypassControls');
+        bypassParams.forEach(param => createToggleParam(param, bypassContainer));
+
+        const advancedContainer = document.getElementById('advancedControls');
+        advancedParams.forEach(param => createSliderParam(param, advancedContainer));
+
+        console.log('RedShiftDistortion UI initialized - 13 parameters bound');
+    </script>
 </body>
 </html>

@@ -57,15 +57,16 @@ target_compile_definitions(RedShiftDistortion
         JUCE_USE_CURL=0
 )
 
-# WebView UI Resources (will be uncommented by gui-agent in Stage 3)
-# juce_add_binary_data(RedShiftDistortion_UIResources
-#     SOURCES
-#         Source/ui/public/index.html
-#         Source/ui/public/js/juce/index.js
-#         Source/ui/public/js/juce/check_native_interop.js
-# )
-#
-# target_link_libraries(RedShiftDistortion
-#     PRIVATE
-#         RedShiftDistortion_UIResources
-# )
+# WebView UI Resources (Pattern #13: binary data for embedded HTML/JS)
+juce_add_binary_data(RedShiftDistortion_UIResources
+    SOURCES
+        Source/ui/public/index.html
+        Source/ui/public/js/juce/index.js
+        Source/ui/public/js/juce/check_native_interop.js
+)
+
+# Link UI resources to plugin
+target_link_libraries(RedShiftDistortion
+    PRIVATE
+        RedShiftDistortion_UIResources
+)
