@@ -66,10 +66,10 @@
     .title {
       position: absolute;
       left: 50%;
-      top: 60px;
+      top: 40px;
       transform: translateX(-50%);
       font-family: 'Jacquard 12', sans-serif;
-      font-size: 60px;
+      font-size: 78px;
       color: #000000;
       text-shadow: -2px 2px 2px #bd0000, 0px 2px 50px #bd0000;
       text-align: center;
@@ -92,13 +92,38 @@
       text-align: center;
     }
 
-    /* v10 CHANGE: HISE filmstrip knob for main doppler control */
+    /* v10 CHANGE: HISE filmstrip knob for main doppler control - SCALED UP 1.5x * 1.4x = 2.1x */
     .main-knob-container {
       position: absolute;
-      left: 391px;
-      top: 266px;
-      width: 168px;
-      height: 168px;
+      left: 345px;
+      top: 250px;
+      width: 176px;
+      height: 176px;
+    }
+
+    /* Red glow layers behind main knob - scaled up 1.5x * 1.4x = 2.1x */
+    .main-knob-glow-outer {
+      position: absolute;
+      width: 315px;
+      height: 315px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 26, 29, 0.8) 0%, rgba(189, 0, 0, 0.6) 40%, transparent 70%);
+      filter: blur(42px);
+    }
+
+    .main-knob-glow-inner {
+      position: absolute;
+      width: 231px;
+      height: 231px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 26, 29, 0.9) 0%, transparent 70%);
+      filter: blur(31px);
     }
 
     /* v10: HISE filmstrip knob (black gear knob) */
@@ -110,16 +135,16 @@
       /* NO rotation - filmstrip uses background-position instead */
       background-image: url('assets/hise_knob_big.png');
       background-repeat: no-repeat;
-      background-size: 168px auto; /* Width fixed to 168px, height scales based on 128 frames */
+      background-size: 176px auto; /* Width fixed to 176px (2.1x scale from 84px) */
       background-position: 0 0; /* Will be updated via JS based on value */
-      transition: background-position 50ms;
+      /* NO transition - filmstrip frames should update instantly */
     }
 
     /* Main knob label */
     .main-knob-label {
       position: absolute;
-      left: 475px;
-      top: 222px;
+      left: 433px;
+      top: 201px;
       font-family: 'Handjet', sans-serif;
       font-size: 30px;
       color: #000000;
@@ -130,27 +155,49 @@
       pointer-events: none;
     }
 
-    /* Sub knobs - 130px diameter (UNCHANGED from v9) */
+    /* Sub knobs - 65px diameter - v10: HISE filmstrip SCALED DOWN */
     .sub-knob-container {
       position: absolute;
-      width: 130px;
-      height: 130px;
+      width: 65px;
+      height: 65px;
+    }
+
+    /* Red glow layers behind sub knobs */
+    .sub-knob-glow-outer {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 26, 29, 0.7) 0%, rgba(189, 0, 0, 0.5) 40%, transparent 70%);
+      filter: blur(15px);
+    }
+
+    .sub-knob-glow-inner {
+      position: absolute;
+      width: 75px;
+      height: 75px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 26, 29, 0.8) 0%, transparent 70%);
+      filter: blur(10px);
     }
 
     .sub-knob {
       position: relative;
       width: 100%;
       height: 100%;
-      transform-origin: center;
-      transition: transform 50ms;
       cursor: pointer;
-    }
-
-    .sub-knob-bg {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
+      /* v10: HISE filmstrip rendering */
+      background-image: url('assets/hise_knob_small.png');
+      background-repeat: no-repeat;
+      background-size: 65px auto; /* Width fixed to 65px (scaled down from 130px) */
+      background-position: 0 0; /* Will be updated via JS based on value */
+      /* NO transition - filmstrip frames update instantly */
     }
 
     /* Sub knob labels (static, do not rotate) */
@@ -165,6 +212,7 @@
       white-space: nowrap;
       pointer-events: none;
       text-transform: uppercase;
+      transform: translateX(-50%); /* Center on X coordinate */
     }
 
     /* Bypass buttons (UNCHANGED) */
@@ -263,7 +311,7 @@
     /* Advanced labels */
     .advanced-label {
       position: absolute;
-      right: 105px;
+      right: 255px;
       font-family: 'Handjet', sans-serif;
       font-size: 16px;
       color: #000000;
@@ -371,59 +419,60 @@
 
       <!-- v10: HISE filmstrip doppler shift knob (168px, 128 frames, neutral at frame 64) -->
       <div class="main-knob-container">
+        <div class="main-knob-glow-outer"></div>
+        <div class="main-knob-glow-inner"></div>
         <div class="main-knob" id="dopplerKnob"></div>
       </div>
-      <div class="main-knob-label">doppler effect delay</div>
 
-      <!-- Sub knobs (6 surrounding knobs) - 130px diameter, UNCHANGED from v9 -->
+      <!-- Sub knobs (6 surrounding knobs) - 65px diameter, v10: HISE filmstrip with red glows -->
 
       <!-- Stereo Width (top-left, 10 o'clock) -->
       <div class="sub-knob-container" style="left: 173px; top: 147px;">
-        <div class="sub-knob" id="stereoWidthKnob">
-          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
-        </div>
+        <div class="sub-knob-glow-outer"></div>
+        <div class="sub-knob-glow-inner"></div>
+        <div class="sub-knob" id="stereoWidthKnob"></div>
       </div>
-      <div class="sub-knob-label" style="left: 238px; top: 120px;">stereo width</div>
+      <div class="sub-knob-label" style="left: 205.5px; top: 220px;">stereo width</div>
 
       <!-- Feedback (top-center, 12 o'clock) -->
       <div class="sub-knob-container" style="left: 410px; top: 123px;">
-        <div class="sub-knob" id="feedbackKnob">
-          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
-        </div>
+        <div class="sub-knob-glow-outer"></div>
+        <div class="sub-knob-glow-inner"></div>
+        <div class="sub-knob" id="feedbackKnob"></div>
       </div>
-      <div class="sub-knob-label" style="left: 475px; top: 96px;">feedback</div>
+      <div class="sub-knob-label" style="left: 442.5px; top: 196px;">feedback</div>
 
       <!-- Master Output (top-right, 2 o'clock) -->
       <div class="sub-knob-container" style="left: 647px; top: 147px;">
-        <div class="sub-knob" id="masterOutputKnob">
-          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
-        </div>
+        <div class="sub-knob-glow-outer"></div>
+        <div class="sub-knob-glow-inner"></div>
+        <div class="sub-knob" id="masterOutputKnob"></div>
       </div>
-      <div class="sub-knob-label" style="left: 712px; top: 120px;">master</div>
+      <div class="sub-knob-label" style="left: 679.5px; top: 220px;">master</div>
 
       <!-- Lo-Cut Filter (bottom-left, 8 o'clock) -->
       <div class="sub-knob-container" style="left: 173px; top: 438px;">
-        <div class="sub-knob" id="loCutKnob">
-          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
-        </div>
+        <div class="sub-knob-glow-outer"></div>
+        <div class="sub-knob-glow-inner"></div>
+        <div class="sub-knob" id="loCutKnob"></div>
       </div>
-      <div class="sub-knob-label" style="left: 238px; top: 583px;">lo-cut</div>
+      <div class="sub-knob-label" style="left: 205.5px; top: 511px;">lo-cut</div>
 
       <!-- Saturation (bottom-center, 6 o'clock) -->
       <div class="sub-knob-container" style="left: 410px; top: 462px;">
-        <div class="sub-knob" id="saturationKnob">
-          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
-        </div>
+        <div class="sub-knob-glow-outer"></div>
+        <div class="sub-knob-glow-inner"></div>
+        <div class="sub-knob" id="saturationKnob"></div>
       </div>
-      <div class="sub-knob-label" style="left: 475px; top: 607px;">saturation</div>
+      <div class="sub-knob-label" style="left: 442.5px; top: 535px;">saturation</div>
 
       <!-- Hi-Cut Filter (bottom-right, 4 o'clock) -->
       <div class="sub-knob-container" style="left: 647px; top: 438px;">
-        <div class="sub-knob" id="hiCutKnob">
-          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
-        </div>
+        <div class="sub-knob-glow-outer"></div>
+        <div class="sub-knob-glow-inner"></div>
+        <div class="sub-knob" id="hiCutKnob"></div>
       </div>
-      <div class="sub-knob-label" style="left: 712px; top: 583px;">hi-cut</div>
+      <div class="sub-knob-label" style="left: 679.5px; top: 511px;">hi-cut</div>
 
       <!-- Bypass buttons (left side vertical stack) - UNCHANGED -->
       <div class="bypass-container" style="left: 25px; top: 230px;">
@@ -456,10 +505,10 @@
 
       <!-- Advanced settings (bottom-right) - UNCHANGED -->
       <div class="advanced-label" style="top: 633px;">Grain Size</div>
-      <input type="range" id="grainSize" class="advanced-slider" style="left: 815px; top: 630px;" min="25" max="200" value="50" />
+      <input type="range" id="grainSize" class="advanced-slider" style="left: 765px; top: 630px;" min="25" max="200" value="50" />
 
       <div class="advanced-label" style="top: 668px;">Grain Overlap</div>
-      <select id="grainOverlap" class="advanced-dropdown" style="left: 815px; top: 665px;">
+      <select id="grainOverlap" class="advanced-dropdown" style="left: 765px; top: 665px;">
         <option value="0">2x</option>
         <option value="1" selected>4x</option>
       </select>
@@ -531,7 +580,7 @@
     }
 
     // v10: HISE filmstrip knob handler - uses background-position instead of rotation
-    function setupHISEFilmstripKnob(elementId, paramId, min, max, defaultValue) {
+    function setupHISEFilmstripKnob(elementId, paramId, min, max, defaultValue, frameHeight) {
       const knob = document.getElementById(elementId);
       let value = defaultValue;
       let isDragging = false;
@@ -539,7 +588,7 @@
       let startValue = value;
 
       const FRAME_COUNT = 128;
-      const FRAME_HEIGHT = 180; // Each frame is 180px tall (from image dimensions)
+      const FRAME_HEIGHT = frameHeight; // Passed as parameter (168px for main, 130px for sub knobs)
 
       function updateFilmstrip() {
         const normalized = (value - min) / (max - min);
@@ -615,16 +664,16 @@
       updateRotation();
     }
 
-    // Setup main HISE filmstrip knob (doppler shift)
-    setupHISEFilmstripKnob('dopplerKnob', 'doppler_shift', -50, 50, 0);
+    // Setup main HISE filmstrip knob (doppler shift) - SCALED UP 2.1x: 176px, frame height 176px
+    setupHISEFilmstripKnob('dopplerKnob', 'doppler_shift', -50, 50, 0, 176);
 
-    // Setup all sub knobs with neutral at 12 o'clock
-    setupKnob('stereoWidthKnob', 'stereo_width', -100, 100, 0);
-    setupKnob('feedbackKnob', 'feedback', 0, 95, 0);
-    setupKnob('masterOutputKnob', 'master_output', -60, 12, 0);
-    setupKnob('loCutKnob', 'lo_cut_filter', 20, 20000, 100);
-    setupKnob('saturationKnob', 'saturation', -12, 24, 0);
-    setupKnob('hiCutKnob', 'hi_cut_filter', 20, 20000, 8000);
+    // v10: Setup all sub knobs as HISE filmstrips - SCALED DOWN: 65px, frame height 65px
+    setupHISEFilmstripKnob('stereoWidthKnob', 'stereo_width', -100, 100, 0, 65);
+    setupHISEFilmstripKnob('feedbackKnob', 'feedback', 0, 95, 0, 65);
+    setupHISEFilmstripKnob('masterOutputKnob', 'master_output', -60, 12, 0, 65);
+    setupHISEFilmstripKnob('loCutKnob', 'lo_cut_filter', 20, 20000, 100, 65);
+    setupHISEFilmstripKnob('saturationKnob', 'saturation', -12, 24, 0, 65);
+    setupHISEFilmstripKnob('hiCutKnob', 'hi_cut_filter', 20, 20000, 8000, 65);
 
     // Setup bypass buttons
     function setupBypassButton(elementId, paramId) {
