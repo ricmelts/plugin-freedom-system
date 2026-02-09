@@ -1,0 +1,249 @@
+window:
+  width: 950
+  height: 700
+  resizable: false
+
+controls:
+  # Center doppler shift knob (primary control) - 168px diameter
+  # v9 CHANGE: CSS Swiss minimal style instead of photorealistic image
+  - id: doppler_shift
+    type: slider
+    position: { x: 391, y: 266 }
+    size: { diameter: 168 }
+    range: [-50.0, 50.0]
+    default: 0.0
+    label: "doppler effect delay"
+    unit: "%"
+    rotation_range: { min: -135, max: 135, neutral: 0 }
+    style: css_swiss_minimal
+    css_properties:
+      border: "2px solid #000000"
+      background: "radial-gradient(circle, #8b0000 0%, #F21A1D 100%)"
+      indicator_color: "#000000"
+      indicator_width: "4px"
+      indicator_length: "60px"
+
+  # Surrounding knobs (radial arrangement) - 130px diameter each
+  # UNCHANGED from v6 - keep photorealistic images
+
+  # Top-left (10 o'clock) - Stereo Width
+  - id: stereo_width
+    type: slider
+    position: { x: 173, y: 147 }
+    size: { diameter: 130 }
+    range: [-100.0, 100.0]
+    default: 0.0
+    label: "stereo width"
+    unit: "%"
+    rotation_range: { min: -135, max: 135, neutral: 0 }
+
+  # Top-center (12 o'clock) - Feedback
+  - id: feedback
+    type: slider
+    position: { x: 410, y: 123 }
+    size: { diameter: 130 }
+    range: [0.0, 95.0]
+    default: 0.0
+    label: "feedback"
+    unit: "%"
+    rotation_range: { min: -135, max: 135, neutral: -135 }
+
+  # Top-right (2 o'clock) - Master Output
+  - id: master_output
+    type: slider
+    position: { x: 647, y: 147 }
+    size: { diameter: 130 }
+    range: [-60.0, 12.0]
+    default: 0.0
+    label: "master"
+    unit: "dB"
+    rotation_range: { min: -135, max: 135, neutral: 0 }
+
+  # Bottom-left (8 o'clock) - Lo-Cut Filter
+  - id: lo_cut_filter
+    type: slider
+    position: { x: 173, y: 438 }
+    size: { diameter: 130 }
+    range: [20.0, 20000.0]
+    default: 100.0
+    label: "lo-cut"
+    unit: "Hz"
+    rotation_range: { min: -135, max: 135, neutral: -135 }
+
+  # Bottom-center (6 o'clock) - Saturation
+  - id: saturation
+    type: slider
+    position: { x: 410, y: 462 }
+    size: { diameter: 130 }
+    range: [-12.0, 24.0]
+    default: 0.0
+    label: "saturation"
+    unit: "dB"
+    rotation_range: { min: -135, max: 135, neutral: 0 }
+
+  # Bottom-right (4 o'clock) - Hi-Cut Filter
+  - id: hi_cut_filter
+    type: slider
+    position: { x: 647, y: 438 }
+    size: { diameter: 130 }
+    range: [20.0, 20000.0]
+    default: 8000.0
+    label: "hi-cut"
+    unit: "Hz"
+    rotation_range: { min: -135, max: 135, neutral: 0 }
+
+  # Bypass controls (left side vertical stack) - 29px diameter (UNCHANGED)
+  - id: bypass_doppler
+    type: toggle
+    position: { x: 25, y: 230 }
+    size: { diameter: 29 }
+    default: false
+    label: "Doppler"
+
+  - id: bypass_saturation
+    type: toggle
+    position: { x: 25, y: 285 }
+    size: { diameter: 29 }
+    default: false
+    label: "Saturation"
+
+  - id: bypass_filters
+    type: toggle
+    position: { x: 25, y: 340 }
+    size: { diameter: 29 }
+    default: false
+    label: "Filters"
+
+  - id: bypass_feedback
+    type: toggle
+    position: { x: 25, y: 395 }
+    size: { diameter: 29 }
+    default: false
+    label: "Feedback"
+
+  # Advanced settings (bottom-right) - UNCHANGED
+  - id: grain_size
+    type: slider
+    position: { x: 815, y: 630 }
+    size: { width: 90, height: 23 }
+    range: [25.0, 200.0]
+    default: 50.0
+    label: "Grain Size"
+    unit: "ms"
+
+  - id: grain_overlap
+    type: combo
+    position: { x: 815, y: 665 }
+    size: { width: 90, height: 26 }
+    options: ["2x", "4x"]
+    default: 1
+    label: "Grain Overlap"
+
+styling:
+  colors:
+    background: "#2a2a2a"
+    panel_border: "#000000"
+    text_primary: "#000000"
+    text_glow: "#bd0000"
+    accent: "#F21A1D"
+    knob_fill: "#D9D9D9"
+    knob_fill_opacity: 0.5
+    knob_stroke: "#000000"
+    indicator: "#333333"
+    button_gradient_start: "#D9D9D9"
+    button_gradient_end: "#888986"
+    led_active: "#F21A1D"
+    vu_meter_red: "#F21A1D"
+    vu_meter_bg: "#1a0a00"
+    # v9: CSS main knob red gradient
+    main_knob_gradient_inner: "#8b0000"
+    main_knob_gradient_outer: "#F21A1D"
+
+  fonts:
+    title: "'Jacquard 12', sans-serif"
+    label: "'Handjet', sans-serif"
+
+  effects:
+    label_glow: "0px -7px 50px #bd0000"
+    title_glow: "-2px 2px 2px #bd0000, 0px 2px 50px #bd0000"
+    screw_size: "38px"
+
+  layout:
+    edge_padding: 20
+    control_spacing: 15
+
+visual_elements:
+  - type: background_texture
+    asset: "assets/00fa754f6e134fb61f5e452b7ba8415e529dd82a.png"
+    style: "cover"
+    description: "Diamond plate texture covering entire 950x700px plugin area"
+
+  - type: corner_screws
+    asset: "assets/4287f6bace032d3fb347fc04a01722012ff802a1.png"
+    positions:
+      - { x: 20, y: 20 }
+      - { x: 20, y: 642 }
+      - { x: 892, y: 20 }
+      - { x: 892, y: 642 }
+    size: 38
+    description: "Red screw images at 4 corners"
+
+  - type: title
+    text: "RED SHIFT"
+    position: { x: 475, y: 60 }
+    font_size: 60
+    font_family: "'Jacquard 12', sans-serif"
+    color: "#000000"
+    text_shadow: "-2px 2px 2px #bd0000, 0px 2px 50px #bd0000"
+    transform: "uppercase"
+
+  - type: subtitle
+    text: "digital delay"
+    position: { x: 475, y: 660 }
+    font_size: 30
+    font_family: "'Handjet', sans-serif"
+    font_weight: 300
+    color: "#000000"
+    text_shadow: "0px -7px 50px #bd0000"
+
+  - type: vu_meters_stereo
+    position: { x: 820, y: 175 }
+    left_meter:
+      position: { x: 820, y: 175 }
+      size: { width: 40, height: 350 }
+      label: "L"
+    right_meter:
+      position: { x: 870, y: 175 }
+      size: { width: 40, height: 350 }
+      label: "R"
+    orientation: "vertical"
+    style: "led_bar"
+    color: "#F21A1D"
+    background: "#1a0a00"
+    description: "Dual stereo VU meters (L + R) with solid red LED bars"
+
+  - type: main_knob_css
+    description: "CSS Swiss minimal knob for doppler_shift - flat design with red radial gradient, black border, black indicator line"
+    style: "swiss_minimal"
+    control: "doppler_shift"
+
+  - type: sub_knob_backgrounds
+    asset: "assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png"
+    description: "Knob image for 6 surrounding knobs (rotates with value), 130px diameter"
+    knobs:
+      - stereo_width
+      - feedback
+      - master_output
+      - lo_cut_filter
+      - saturation
+      - hi_cut_filter
+
+metadata:
+  version: 9
+  plugin_name: "RedShiftDistortion"
+  design_intent: "Simplified center knob with geometric flat design while maintaining surrounding knobs"
+  visual_style: "vintage/industrial with Swiss minimal center knob"
+  parameter_count: 13
+  created: "2026-02-09"
+  changes_from_v6: "Main doppler knob: Replaced photorealistic image + red glow with CSS Swiss minimal style (red radial gradient, black border, black indicator line, flat design)"
+  previous_version: 6
