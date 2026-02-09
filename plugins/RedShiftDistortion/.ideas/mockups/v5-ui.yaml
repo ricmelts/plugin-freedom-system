@@ -1,0 +1,233 @@
+window:
+  width: 950
+  height: 700
+  resizable: false
+
+controls:
+  # Center doppler shift knob (primary control) - 168px diameter (224 * 0.75)
+  - id: doppler_shift
+    type: slider
+    position: { x: 391, y: 266 }
+    size: { diameter: 168 }
+    range: [-50.0, 50.0]
+    default: 0.0
+    label: "doppler effect delay"
+    unit: "%"
+
+  # Surrounding knobs (radial arrangement) - 65px diameter each (86 * 0.75)
+  # Top-left (10 o'clock) - Stereo Width
+  - id: stereo_width
+    type: slider
+    position: { x: 206, y: 180 }
+    size: { diameter: 65 }
+    range: [0.0, 200.0]
+    default: 100.0
+    label: "stereo width"
+    unit: "%"
+
+  # Top-center (12 o'clock) - Feedback
+  - id: feedback
+    type: slider
+    position: { x: 443, y: 156 }
+    size: { diameter: 65 }
+    range: [0.0, 100.0]
+    default: 0.0
+    label: "feedback"
+    unit: "%"
+
+  # Top-right (2 o'clock) - Master Output
+  - id: master_output
+    type: slider
+    position: { x: 679, y: 180 }
+    size: { diameter: 65 }
+    range: [-60.0, 12.0]
+    default: 0.0
+    label: "master"
+    unit: "dB"
+
+  # Bottom-left (8 o'clock) - Lo-Cut Filter
+  - id: lo_cut_filter
+    type: slider
+    position: { x: 206, y: 471 }
+    size: { diameter: 65 }
+    range: [20.0, 1000.0]
+    default: 20.0
+    label: "lo-cut"
+    unit: "Hz"
+
+  # Bottom-center (6 o'clock) - Saturation
+  - id: saturation
+    type: slider
+    position: { x: 443, y: 495 }
+    size: { diameter: 65 }
+    range: [0.0, 100.0]
+    default: 0.0
+    label: "saturation"
+    unit: "%"
+
+  # Bottom-right (4 o'clock) - Hi-Cut Filter
+  - id: hi_cut_filter
+    type: slider
+    position: { x: 679, y: 471 }
+    size: { diameter: 65 }
+    range: [1000.0, 20000.0]
+    default: 20000.0
+    label: "hi-cut"
+    unit: "Hz"
+
+  # Bypass controls (left side vertical stack) - 29px diameter (38 * 0.75)
+  - id: bypass_doppler
+    type: toggle
+    position: { x: 25, y: 230 }
+    size: { diameter: 29 }
+    default: false
+    label: "Doppler"
+
+  - id: bypass_saturation
+    type: toggle
+    position: { x: 25, y: 285 }
+    size: { diameter: 29 }
+    default: false
+    label: "Saturation"
+
+  - id: bypass_filters
+    type: toggle
+    position: { x: 25, y: 340 }
+    size: { diameter: 29 }
+    default: false
+    label: "Filters"
+
+  - id: bypass_feedback
+    type: toggle
+    position: { x: 25, y: 395 }
+    size: { diameter: 29 }
+    default: false
+    label: "Feedback"
+
+  # Advanced settings (bottom-right) - 90×23px slider, 90×26px dropdown (120×30, 120×35 * 0.75)
+  - id: grain_size
+    type: slider
+    position: { x: 815, y: 630 }
+    size: { width: 90, height: 23 }
+    range: [25.0, 200.0]
+    default: 50.0
+    label: "Grain Size"
+    unit: "ms"
+
+  - id: grain_overlap
+    type: combo
+    position: { x: 815, y: 665 }
+    size: { width: 90, height: 26 }
+    options: ["2x", "4x"]
+    default: 0
+    label: "Grain Overlap"
+
+styling:
+  colors:
+    background: "#2a2a2a"
+    panel_border: "#000000"
+    text_primary: "#000000"
+    text_glow: "#bd0000"
+    accent: "#F21A1D"
+    knob_fill: "#D9D9D9"
+    knob_fill_opacity: 0.5
+    knob_stroke: "#000000"
+    indicator: "#333333"
+    button_gradient_start: "#D9D9D9"
+    button_gradient_end: "#888986"
+    led_active: "#F21A1D"
+
+  fonts:
+    title: "'Jacquard 12', sans-serif"
+    label: "'Handjet', sans-serif"
+
+  effects:
+    label_glow: "0px -7px 50px #bd0000"
+    title_glow: "-2px 2px 2px #bd0000, 0px 2px 50px #bd0000"
+    border_width: "7.5px"
+    screw_size: "38px"
+
+  layout:
+    edge_padding: 20
+    control_spacing: 15
+
+visual_elements:
+  - type: background_texture
+    asset: "assets/00fa754f6e134fb61f5e452b7ba8415e529dd82a.png"
+    style: "cover"
+    description: "Diamond plate texture covering entire 950x700px plugin area"
+
+  - type: corner_screws
+    asset: "assets/4287f6bace032d3fb347fc04a01722012ff802a1.png"
+    positions:
+      - { x: 20, y: 20 }
+      - { x: 20, y: 642 }
+      - { x: 892, y: 20 }
+      - { x: 892, y: 642 }
+    size: 38
+    description: "Red screw images at 4 corners (scaled by 0.75)"
+
+  - type: barrier_lines
+    lines:
+      - { from: { x: 260, y: 550 }, to: { x: 410, y: 550 }, width: 7.5 }
+      - { from: { x: 540, y: 550 }, to: { x: 690, y: 550 }, width: 7.5 }
+      - { from: { x: 360, y: 340 }, to: { x: 360, y: 190 }, width: 7.5 }
+      - { from: { x: 590, y: 340 }, to: { x: 590, y: 190 }, width: 7.5 }
+    glow: "drop-shadow(0px 2px 50px #bd0000)"
+
+  - type: title
+    text: "RED SHIFT"
+    position: { x: 475, y: 60 }
+    font_size: 60
+    font_family: "'Jacquard 12', sans-serif"
+    color: "#000000"
+    text_shadow: "-2px 2px 2px #bd0000, 0px 2px 50px #bd0000"
+    transform: "uppercase"
+
+  - type: subtitle
+    text: "digital delay"
+    position: { x: 475, y: 660 }
+    font_size: 30
+    font_family: "'Handjet', sans-serif"
+    font_weight: 300
+    color: "#000000"
+    text_shadow: "0px -7px 50px #bd0000"
+
+  - type: vu_meter
+    position: { x: 870, y: 175 }
+    size: { width: 50, height: 350 }
+    orientation: "vertical"
+    style: "led_bar"
+    gradient: ["#00ff00", "#ffff00", "#ff0000"]
+    animation: "reactive_particles"
+
+  - type: sub_knob_backgrounds
+    asset: "assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png"
+    description: "Knob image for 6 surrounding knobs (rotates with value)"
+    knobs:
+      - stereo_width
+      - feedback
+      - master_output
+      - lo_cut_filter
+      - saturation
+      - hi_cut_filter
+
+metadata:
+  version: 5
+  plugin_name: "RedShiftDistortion"
+  design_intent: "Industrial metal with diamond plate background, actual asset images, 0.75 scale factor, 950x700px window"
+  visual_style: "vintage/industrial"
+  parameter_count: 13
+  created: "2026-02-08"
+  changes_from_v4:
+    - "Window size increased to 950×700px (from 900×650px)"
+    - "All elements scaled by 0.75 factor"
+    - "Central doppler knob: 168px diameter (224px × 0.75)"
+    - "Surrounding knobs: 65px diameter (86px × 0.75)"
+    - "Bypass buttons: 29px diameter (38px × 0.75)"
+    - "Diamond plate background (00fa754f6e...png) for entire plugin area"
+    - "Actual red screw images (4287f6ba...png) for corners"
+    - "Actual knob images (f26475b6...png) for 6 sub knobs (image rotates)"
+    - "VU meter repositioned to x:870px (right edge with proper margin)"
+    - "Text sizes scaled proportionally by 0.75"
+    - "Asset images copied to mockups/assets/ folder"
