@@ -1,0 +1,43 @@
+{
+  "name": "RedShift Industrial Metal",
+  "id": "redshift-industrial-metal",
+  "description": "Bold industrial metal aesthetic with vibrant red accents, diamond plate textures, and photorealistic hardware controls",
+  "vibe": "Industrial, powerful, professional with creative edge",
+  "sourcePlugin": "RedShiftDistortion",
+  "sourceVersion": "v6",
+  "created": "2026-02-09",
+  "tags": [
+    "industrial",
+    "metal",
+    "red",
+    "bold",
+    "hardware",
+    "distortion",
+    "vintage",
+    "radial-layout",
+    "texture",
+    "vu-meters"
+  ],
+  "colorPalette": {
+    "primary": "#F21A1D",
+    "background": "diamond-plate-texture",
+    "text": "#000000",
+    "accent": "#bd0000"
+  },
+  "bestFor": [
+    "Distortion effects",
+    "Tape delays",
+    "Saturation processors",
+    "Vintage hardware emulations",
+    "Aggressive creative effects"
+  ],
+  "notRecommendedFor": [
+    "Subtle utility plugins",
+    "Clean transparent processors",
+    "Warm vintage (orange/brown palette) plugins",
+    "Plugins with 10+ parameters"
+  ],
+  "usedInPlugins": [
+    "RedShiftDistortion"
+  ]
+}

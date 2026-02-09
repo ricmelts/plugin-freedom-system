@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedShiftDistortion UI Mockup v6</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Handjet:wght@300;400&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Jacquard+12&display=swap');
+
+    /* CRITICAL: WebView constraints */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      /* Native application feel */
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: default;
+      overflow: hidden;
+
+      /* Centering frame for browser testing */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+    }
+
+    /* Fixed-size plugin frame (test HTML only) */
+    .plugin-frame {
+      width: 950px;
+      height: 700px;
+      border: 2px solid #444;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Plugin container fills frame */
+    .container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background-image: url('assets/00fa754f6e134fb61f5e452b7ba8415e529dd82a.png');
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* Corner screws */
+    .screw {
+      position: absolute;
+      width: 38px;
+      height: 38px;
+      pointer-events: none;
+    }
+
+    /* Title */
+    .title {
+      position: absolute;
+      left: 50%;
+      top: 60px;
+      transform: translateX(-50%);
+      font-family: 'Jacquard 12', sans-serif;
+      font-size: 60px;
+      color: #000000;
+      text-shadow: -2px 2px 2px #bd0000, 0px 2px 50px #bd0000;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+
+    /* Subtitle */
+    .subtitle {
+      position: absolute;
+      left: 50%;
+      top: 660px;
+      transform: translateX(-50%);
+      font-family: 'Handjet', sans-serif;
+      font-size: 30px;
+      font-weight: 300;
+      color: #000000;
+      text-shadow: 0px -7px 50px #bd0000;
+      text-align: center;
+    }
+
+    /* Central doppler knob - 168px diameter */
+    .main-knob-container {
+      position: absolute;
+      left: 391px;
+      top: 266px;
+      width: 168px;
+      height: 168px;
+    }
+
+    .main-knob {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-origin: center;
+      transition: transform 50ms;
+      cursor: pointer;
+    }
+
+    .main-knob-glow-outer {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(189, 0, 0, 0.5) 0%, transparent 70%);
+      filter: blur(20px);
+    }
+
+    .main-knob-glow-inner {
+      position: absolute;
+      width: 80%;
+      height: 80%;
+      left: 10%;
+      top: 10%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(189, 0, 0, 0.75) 0%, transparent 70%);
+      filter: blur(10px);
+    }
+
+    .main-knob-indicator {
+      position: absolute;
+      width: 8px;
+      height: 60px;
+      left: 50%;
+      top: 10px;
+      transform: translateX(-50%);
+      background: #333;
+      border-radius: 4px;
+    }
+
+    /* Main knob label */
+    .main-knob-label {
+      position: absolute;
+      left: 475px;
+      top: 222px;
+      font-family: 'Handjet', sans-serif;
+      font-size: 30px;
+      color: #000000;
+      text-shadow: 0px -7px 50px #bd0000;
+      text-align: center;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Sub knobs - 130px diameter (DOUBLED from 65px) */
+    .sub-knob-container {
+      position: absolute;
+      width: 130px;
+      height: 130px;
+    }
+
+    .sub-knob {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-origin: center;
+      transition: transform 50ms;
+      cursor: pointer;
+    }
+
+    .sub-knob-bg {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Sub knob labels (static, do not rotate) */
+    .sub-knob-label {
+      position: absolute;
+      font-family: 'Handjet', sans-serif;
+      font-size: 26px;
+      font-weight: 400;
+      color: #000000;
+      text-shadow: 0px -7px 50px #bd0000;
+      text-align: center;
+      white-space: nowrap;
+      pointer-events: none;
+      text-transform: uppercase;
+    }
+
+    /* Bypass buttons */
+    .bypass-container {
+      position: absolute;
+      width: 29px;
+      height: 29px;
+    }
+
+    .bypass-button {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #D9D9D9 0%, #888986 100%);
+      border: 3px solid rgba(242, 26, 29, 0.5);
+      cursor: pointer;
+      transition: all 100ms;
+    }
+
+    .bypass-button:hover {
+      border-color: rgba(242, 26, 29, 0.8);
+    }
+
+    .bypass-button.active {
+      background: linear-gradient(180deg, #F21A1D 0%, #bd0000 100%);
+      border-color: #F21A1D;
+    }
+
+    .bypass-led {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(242, 26, 29, 0.3);
+      border: 2px solid #000;
+    }
+
+    .bypass-button.active .bypass-led {
+      background: #F21A1D;
+      box-shadow: 0 0 10px #F21A1D;
+    }
+
+    /* Bypass labels */
+    .bypass-label {
+      position: absolute;
+      left: 60px;
+      font-family: 'Handjet', sans-serif;
+      font-size: 18px;
+      color: #000000;
+      text-shadow: 0px -5px 30px #bd0000;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Advanced settings */
+    .advanced-slider {
+      position: absolute;
+      width: 90px;
+      height: 23px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #000;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .advanced-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 19px;
+      background: linear-gradient(180deg, #D9D9D9 0%, #888986 100%);
+      border: 1px solid #000;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    .advanced-dropdown {
+      position: absolute;
+      width: 90px;
+      height: 26px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #000;
+      border-radius: 3px;
+      color: #fff;
+      font-family: 'Handjet', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 2px 5px;
+    }
+
+    /* Advanced labels */
+    .advanced-label {
+      position: absolute;
+      right: 105px;
+      font-family: 'Handjet', sans-serif;
+      font-size: 16px;
+      color: #000000;
+      text-shadow: 0px -5px 30px #bd0000;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* VU Meter - DUAL STEREO (L + R) */
+    .vu-meter-container {
+      position: absolute;
+      left: 820px;
+      top: 175px;
+      width: 90px;
+      height: 350px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .vu-meter {
+      width: 40px;
+      height: 350px;
+      background: #1a0a00;
+      border: 2px solid #000;
+      border-radius: 5px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .vu-meter-label {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Handjet', sans-serif;
+      font-size: 18px;
+      color: #000000;
+      text-shadow: 0px -5px 30px #bd0000;
+      font-weight: bold;
+    }
+
+    .vu-meter-fill {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 0%;
+      background: #F21A1D;
+      transition: height 50ms;
+    }
+
+    /* Debug monitor */
+    .debug-monitor {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 8px 12px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      min-width: 150px;
+      pointer-events: none;
+      z-index: 10000;
+    }
+
+    .debug-label {
+      color: #666;
+      font-size: 9px;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+
+    .debug-param {
+      font-weight: bold;
+      color: #0f0;
+    }
+
+    .debug-value {
+      color: #fff;
+      margin-top: 2px;
+    }
+
+    .debug-normalized {
+      color: #888;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-frame">
+    <div class="container">
+      <!-- Corner screws -->
+      <img src="assets/4287f6bace032d3fb347fc04a01722012ff802a1.png" class="screw" style="left: 20px; top: 20px;" />
+      <img src="assets/4287f6bace032d3fb347fc04a01722012ff802a1.png" class="screw" style="left: 20px; top: 642px;" />
+      <img src="assets/4287f6bace032d3fb347fc04a01722012ff802a1.png" class="screw" style="left: 892px; top: 20px;" />
+      <img src="assets/4287f6bace032d3fb347fc04a01722012ff802a1.png" class="screw" style="left: 892px; top: 642px;" />
+
+      <!-- Title -->
+      <div class="title">RED SHIFT</div>
+
+      <!-- Subtitle -->
+      <div class="subtitle">digital delay</div>
+
+      <!-- Central doppler shift knob (168px, neutral at 12 o'clock) -->
+      <div class="main-knob-container">
+        <div class="main-knob" id="dopplerKnob">
+          <div class="main-knob-glow-outer"></div>
+          <div class="main-knob-glow-inner"></div>
+          <div class="main-knob-indicator"></div>
+        </div>
+      </div>
+      <div class="main-knob-label">doppler effect delay</div>
+
+      <!-- Sub knobs (6 surrounding knobs) - 130px diameter, neutral at 12 o'clock -->
+
+      <!-- Stereo Width (top-left, 10 o'clock) -->
+      <div class="sub-knob-container" style="left: 173px; top: 147px;">
+        <div class="sub-knob" id="stereoWidthKnob">
+          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
+        </div>
+      </div>
+      <div class="sub-knob-label" style="left: 238px; top: 120px;">stereo width</div>
+
+      <!-- Feedback (top-center, 12 o'clock) -->
+      <div class="sub-knob-container" style="left: 410px; top: 123px;">
+        <div class="sub-knob" id="feedbackKnob">
+          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
+        </div>
+      </div>
+      <div class="sub-knob-label" style="left: 475px; top: 96px;">feedback</div>
+
+      <!-- Master Output (top-right, 2 o'clock) -->
+      <div class="sub-knob-container" style="left: 647px; top: 147px;">
+        <div class="sub-knob" id="masterOutputKnob">
+          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
+        </div>
+      </div>
+      <div class="sub-knob-label" style="left: 712px; top: 120px;">master</div>
+
+      <!-- Lo-Cut Filter (bottom-left, 8 o'clock) -->
+      <div class="sub-knob-container" style="left: 173px; top: 438px;">
+        <div class="sub-knob" id="loCutKnob">
+          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
+        </div>
+      </div>
+      <div class="sub-knob-label" style="left: 238px; top: 583px;">lo-cut</div>
+
+      <!-- Saturation (bottom-center, 6 o'clock) -->
+      <div class="sub-knob-container" style="left: 410px; top: 462px;">
+        <div class="sub-knob" id="saturationKnob">
+          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
+        </div>
+      </div>
+      <div class="sub-knob-label" style="left: 475px; top: 607px;">saturation</div>
+
+      <!-- Hi-Cut Filter (bottom-right, 4 o'clock) -->
+      <div class="sub-knob-container" style="left: 647px; top: 438px;">
+        <div class="sub-knob" id="hiCutKnob">
+          <img src="assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png" class="sub-knob-bg" />
+        </div>
+      </div>
+      <div class="sub-knob-label" style="left: 712px; top: 583px;">hi-cut</div>
+
+      <!-- Bypass buttons (left side vertical stack) -->
+      <div class="bypass-container" style="left: 25px; top: 230px;">
+        <div class="bypass-button" id="bypassDoppler">
+          <div class="bypass-led"></div>
+        </div>
+      </div>
+      <div class="bypass-label" style="top: 234px;">Doppler</div>
+
+      <div class="bypass-container" style="left: 25px; top: 285px;">
+        <div class="bypass-button" id="bypassSaturation">
+          <div class="bypass-led"></div>
+        </div>
+      </div>
+      <div class="bypass-label" style="top: 289px;">Saturation</div>
+
+      <div class="bypass-container" style="left: 25px; top: 340px;">
+        <div class="bypass-button" id="bypassFilters">
+          <div class="bypass-led"></div>
+        </div>
+      </div>
+      <div class="bypass-label" style="top: 344px;">Filters</div>
+
+      <div class="bypass-container" style="left: 25px; top: 395px;">
+        <div class="bypass-button" id="bypassFeedback">
+          <div class="bypass-led"></div>
+        </div>
+      </div>
+      <div class="bypass-label" style="top: 399px;">Feedback</div>
+
+      <!-- Advanced settings (bottom-right) -->
+      <div class="advanced-label" style="top: 633px;">Grain Size</div>
+      <input type="range" id="grainSize" class="advanced-slider" style="left: 815px; top: 630px;" min="25" max="200" value="50" />
+
+      <div class="advanced-label" style="top: 668px;">Grain Overlap</div>
+      <select id="grainOverlap" class="advanced-dropdown" style="left: 815px; top: 665px;">
+        <option value="0">2x</option>
+        <option value="1" selected>4x</option>
+      </select>
+
+      <!-- DUAL VU METERS (L + R) - Solid RED only -->
+      <div class="vu-meter-container">
+        <div class="vu-meter">
+          <div class="vu-meter-label">L</div>
+          <div class="vu-meter-fill" id="vuMeterFillL"></div>
+        </div>
+        <div class="vu-meter">
+          <div class="vu-meter-label">R</div>
+          <div class="vu-meter-fill" id="vuMeterFillR"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Debug monitor (test HTML only) -->
+  <div class="debug-monitor">
+    <div class="debug-label">PARAMETER MONITOR</div>
+    <div class="debug-param" id="debugParam">—</div>
+    <div class="debug-value" id="debugValue">—</div>
+    <div class="debug-normalized" id="debugNormalized">—</div>
+  </div>
+
+  <script>
+    // Mock JUCE backend for browser testing
+    window.Juce = {
+      getSliderState: (id) => ({
+        normalisedValue: 0.5,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        },
+        setNormalisedValue: (v) => console.log(`${id} set to ${v}`)
+      }),
+      getToggleState: (id) => ({
+        value: false,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        },
+        setValue: (v) => console.log(`${id} set to ${v}`)
+      }),
+      getComboBoxState: (id) => ({
+        selectedId: 0,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        },
+        setSelectedId: (id) => console.log(`${id} selected`)
+      })
+    };
+
+    // Disable context menu (REQUIRED)
+    document.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      return false;
+    });
+
+    // Disable default drag behaviors
+    document.addEventListener("dragstart", (e) => {
+      e.preventDefault();
+    });
+
+    // Update debug monitor
+    function updateDebugMonitor(paramId, value, normalizedValue) {
+      document.getElementById('debugParam').textContent = paramId;
+      document.getElementById('debugValue').textContent = value.toFixed(2);
+      document.getElementById('debugNormalized').textContent = `${(normalizedValue * 100).toFixed(1)}%`;
+    }
+
+    // Knob rotation handler - NEUTRAL POSITION AT 12 O'CLOCK
+    function setupKnob(elementId, paramId, min, max, defaultValue) {
+      const knob = document.getElementById(elementId);
+      let value = defaultValue;
+      let isDragging = false;
+      let startY = 0;
+      let startValue = value;
+
+      function updateRotation() {
+        const normalized = (value - min) / (max - min);
+        // Neutral position (default value) is at 12 o'clock (0 degrees)
+        // -135° at minimum, 0° at neutral (default), +135° at maximum
+        const neutralNormalized = (defaultValue - min) / (max - min);
+        const degrees = -135 + (normalized * 270);
+        knob.style.transform = `rotate(${degrees}deg)`;
+        updateDebugMonitor(paramId, value, normalized);
+      }
+
+      knob.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        startValue = value;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const delta = startY - e.clientY;
+        const range = max - min;
+        const sensitivity = range / 200;
+        value = Math.max(min, Math.min(max, startValue + (delta * sensitivity)));
+        updateRotation();
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      updateRotation();
+    }
+
+    // Setup all knobs with neutral at 12 o'clock
+    // Parameters with default = 0 or midpoint will have indicator pointing straight up
+    setupKnob('dopplerKnob', 'doppler_shift', -50, 50, 0);
+    setupKnob('stereoWidthKnob', 'stereo_width', -100, 100, 0);
+    setupKnob('feedbackKnob', 'feedback', 0, 95, 0);
+    setupKnob('masterOutputKnob', 'master_output', -60, 12, 0);
+    setupKnob('loCutKnob', 'lo_cut_filter', 20, 20000, 100);
+    setupKnob('saturationKnob', 'saturation', -12, 24, 0);
+    setupKnob('hiCutKnob', 'hi_cut_filter', 20, 20000, 8000);
+
+    // Setup bypass buttons
+    function setupBypassButton(elementId, paramId) {
+      const button = document.getElementById(elementId);
+      let active = false;
+
+      button.addEventListener('click', () => {
+        active = !active;
+        button.classList.toggle('active', active);
+        updateDebugMonitor(paramId, active ? 1 : 0, active ? 1 : 0);
+      });
+    }
+
+    setupBypassButton('bypassDoppler', 'bypass_doppler');
+    setupBypassButton('bypassSaturation', 'bypass_saturation');
+    setupBypassButton('bypassFilters', 'bypass_filters');
+    setupBypassButton('bypassFeedback', 'bypass_feedback');
+
+    // Setup advanced settings
+    const grainSizeSlider = document.getElementById('grainSize');
+    grainSizeSlider.addEventListener('input', (e) => {
+      const value = parseFloat(e.target.value);
+      const normalized = (value - 25) / (200 - 25);
+      updateDebugMonitor('grain_size', value, normalized);
+    });
+
+    const grainOverlapDropdown = document.getElementById('grainOverlap');
+    grainOverlapDropdown.addEventListener('change', (e) => {
+      const value = parseInt(e.target.value);
+      updateDebugMonitor('grain_overlap', value === 0 ? '2x' : '4x', value);
+    });
+
+    // Animate DUAL VU meters (mock audio levels for L + R)
+    function animateVUMeters() {
+      const vuMeterFillL = document.getElementById('vuMeterFillL');
+      const vuMeterFillR = document.getElementById('vuMeterFillR');
+
+      // Independent random levels for L and R channels
+      const levelL = Math.random() * 80 + 20; // Random level between 20-100%
+      const levelR = Math.random() * 80 + 20; // Random level between 20-100%
+
+      vuMeterFillL.style.height = `${levelL}%`;
+      vuMeterFillR.style.height = `${levelR}%`;
+    }
+
+    setInterval(animateVUMeters, 100);
+
+    console.log('RedShiftDistortion UI Mockup v6 loaded');
+    console.log('Window size: 950×700px');
+    console.log('Surrounding knobs: 130px diameter (DOUBLED from v5)');
+    console.log('ALL knobs: Neutral position at 12 o\'clock (indicator points straight up at default value)');
+    console.log('Static text labels for all 6 surrounding knobs');
+    console.log('DUAL VU METERS: L + R side by side (40px each, 10px gap, solid red)');
+    console.log('REMOVED all barrier lines for clean layout');
+  </script>
+</body>
+</html>
