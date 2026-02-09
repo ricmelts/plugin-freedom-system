@@ -1,0 +1,290 @@
+window:
+  width: 950
+  height: 700
+  resizable: false
+
+controls:
+  # Center doppler shift knob (primary control) - 168px diameter (UNCHANGED)
+  - id: doppler_shift
+    type: slider
+    position: { x: 391, y: 266 }
+    size: { diameter: 168 }
+    range: [-50.0, 50.0]
+    default: 0.0
+    label: "doppler effect delay"
+    label_position: beneath
+    unit: "%"
+    rotation_range: { min: -135, max: 135, neutral: 0 }
+    has_glow: true
+    value_display: true
+
+  # Surrounding knobs (radial arrangement) - 128px diameter (CSS conic gradient)
+  # NEW: CSS-styled knobs with tick marks and value displays
+
+  # Top-left (10 o'clock) - Stereo Width
+  - id: stereo_width
+    type: slider
+    position: { x: 165, y: 120 }
+    size: { diameter: 128 }
+    range: [-100.0, 100.0]
+    default: 0.0
+    label: "stereo width"
+    label_position: beneath
+    unit: "%"
+    rotation_range: { min: -135, max: 135, neutral: 0 }
+    tick_marks:
+      count: 11
+      labels: ["-100", "-75", "-50", "-25", "0", "25", "50", "75", "100"]
+    value_display: true
+
+  # Top-center (12 o'clock) - Feedback
+  - id: feedback
+    type: slider
+    position: { x: 411, y: 75 }
+    size: { diameter: 128 }
+    range: [0.0, 95.0]
+    default: 0.0
+    label: "feedback"
+    label_position: beneath
+    unit: "%"
+    rotation_range: { min: -135, max: 135, neutral: -135 }
+    tick_marks:
+      count: 11
+      labels: ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "95"]
+    value_display: true
+
+  # Top-right (2 o'clock) - Master Output
+  - id: master_output
+    type: slider
+    position: { x: 657, y: 120 }
+    size: { diameter: 128 }
+    range: [-60.0, 12.0]
+    default: 0.0
+    label: "master"
+    label_position: beneath
+    unit: "dB"
+    rotation_range: { min: -135, max: 135, neutral: 0 }
+    tick_marks:
+      count: 11
+      labels: ["-60", "-48", "-36", "-24", "-12", "0", "12"]
+    value_display: true
+
+  # Bottom-left (8 o'clock) - Lo-Cut Filter
+  - id: lo_cut_filter
+    type: slider
+    position: { x: 165, y: 452 }
+    size: { diameter: 128 }
+    range: [20.0, 20000.0]
+    default: 100.0
+    label: "lo-cut"
+    label_position: beneath
+    unit: "Hz"
+    rotation_range: { min: -135, max: 135, neutral: -135 }
+    tick_marks:
+      count: 9
+      labels: ["20", "100", "250", "500", "1k", "2.5k", "5k", "10k", "20k"]
+    value_display: true
+
+  # Bottom-center (6 o'clock) - Saturation
+  - id: saturation
+    type: slider
+    position: { x: 411, y: 497 }
+    size: { diameter: 128 }
+    range: [-12.0, 24.0]
+    default: 0.0
+    label: "saturation"
+    label_position: beneath
+    unit: "dB"
+    rotation_range: { min: -135, max: 135, neutral: 0 }
+    tick_marks:
+      count: 9
+      labels: ["-12", "-6", "0", "6", "12", "18", "24"]
+    value_display: true
+
+  # Bottom-right (4 o'clock) - Hi-Cut Filter
+  - id: hi_cut_filter
+    type: slider
+    position: { x: 657, y: 452 }
+    size: { diameter: 128 }
+    range: [20.0, 20000.0]
+    default: 8000.0
+    label: "hi-cut"
+    label_position: beneath
+    unit: "Hz"
+    rotation_range: { min: -135, max: 135, neutral: 0 }
+    tick_marks:
+      count: 9
+      labels: ["20", "100", "250", "500", "1k", "2.5k", "5k", "10k", "20k"]
+    value_display: true
+
+  # Bypass controls (left side vertical stack) - 44px diameter (UNCHANGED)
+  - id: bypass_doppler
+    type: toggle
+    position: { x: 25, y: 215 }
+    size: { diameter: 44 }
+    default: false
+    label: "Doppler"
+
+  - id: bypass_saturation
+    type: toggle
+    position: { x: 25, y: 285 }
+    size: { diameter: 44 }
+    default: false
+    label: "Saturation"
+
+  - id: bypass_filters
+    type: toggle
+    position: { x: 25, y: 355 }
+    size: { diameter: 44 }
+    default: false
+    label: "Filters"
+
+  - id: bypass_feedback
+    type: toggle
+    position: { x: 25, y: 425 }
+    size: { diameter: 44 }
+    default: false
+    label: "Feedback"
+
+  # Advanced settings (bottom-center, side by side)
+  - id: grain_size
+    type: slider
+    position: { x: 550, y: 650 }
+    size: { width: 90, height: 23 }
+    range: [25.0, 200.0]
+    default: 50.0
+    label: "Grain Size"
+    unit: "ms"
+
+  - id: grain_overlap
+    type: combo
+    position: { x: 655, y: 647 }
+    size: { width: 90, height: 26 }
+    options: ["2x", "4x"]
+    default: 1
+    label: "Grain Overlap"
+
+styling:
+  colors:
+    background: "#2a2a2a"
+    panel_border: "#000000"
+    text_primary: "#000000"
+    text_glow: "#bd0000"
+    accent: "#F21A1D"
+    knob_gradient_1: "#1e1e1e"
+    knob_gradient_2: "#1a1a1a"
+    indicator_color: "#F21A1D"
+    value_display_bg: "#0a0a0a"
+    value_display_text: "#F21A1D"
+    tick_mark_color: "#F21A1D"
+    button_gradient_start: "#D9D9D9"
+    button_gradient_end: "#888986"
+    led_active: "#F21A1D"
+    led_inactive: "#3a1a1a"
+    vu_meter_red: "#F21A1D"
+    vu_meter_bg: "rgba(0, 0, 0, 0.5)"
+
+  fonts:
+    title: "'Jacquard 12', sans-serif"
+    label: "'Handjet', sans-serif"
+    value_display: "'Courier New', monospace"
+
+  effects:
+    label_glow: "0px -7px 50px #bd0000"
+    title_glow: "-2px 2px 2px #bd0000, 0px 2px 50px #bd0000"
+    knob_red_glow: "0 0 20px rgba(242, 26, 29, 0.6), 0 0 40px rgba(242, 26, 29, 0.3)"
+    screw_size: "38px"
+    label_font_size: "28px"
+    led_indicator_size: "18px"
+    value_display_font_size: "14px"
+    tick_font_size: "10px"
+
+  layout:
+    edge_padding: 20
+    control_spacing: 20
+
+visual_elements:
+  - type: background_texture
+    asset: "assets/00fa754f6e134fb61f5e452b7ba8415e529dd82a.png"
+    style: "cover"
+    description: "Diamond plate texture covering entire 950x700px plugin area"
+
+  - type: corner_screws
+    asset: "assets/4287f6bace032d3fb347fc04a01722012ff802a1.png"
+    positions:
+      - { x: 20, y: 20 }
+      - { x: 20, y: 642 }
+      - { x: 892, y: 20 }
+      - { x: 892, y: 642 }
+    size: 38
+    description: "Red screw images at 4 corners"
+
+  - type: title
+    text: "RED SHIFT"
+    position: { x: 475, y: 60 }
+    font_size: 60
+    font_family: "'Jacquard 12', sans-serif"
+    color: "#000000"
+    text_shadow: "-2px 2px 2px #bd0000, 0px 2px 50px #bd0000"
+    transform: "uppercase"
+
+  - type: subtitle
+    text: "digital delay"
+    position: { x: 235, y: 660 }
+    font_size: 28
+    font_family: "'Handjet', sans-serif"
+    font_weight: 300
+    color: "#000000"
+    text_shadow: "0px -7px 50px #bd0000"
+
+  - type: vu_meters_stereo
+    position: { x: 820, y: 175 }
+    left_meter:
+      position: { x: 820, y: 175 }
+      size: { width: 40, height: 350 }
+      label: "L"
+    right_meter:
+      position: { x: 870, y: 175 }
+      size: { width: 40, height: 350 }
+      label: "R"
+    orientation: "vertical"
+    style: "led_bar"
+    color: "#F21A1D"
+    background: "rgba(0, 0, 0, 0.5)"
+    description: "Dual stereo VU meters (L + R) with 50% opacity black background"
+
+  - type: main_knob_image
+    asset: "assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png"
+    description: "Main doppler knob image (rotates with value), 168px diameter, black gear with red glow"
+    knob: doppler_shift
+
+metadata:
+  version: 8
+  plugin_name: "RedShiftDistortion"
+  design_intent: "Replace 195px image knobs with 128px CSS conic gradient knobs. Add tick marks with value labels around each knob. Add LED-style value displays beneath knobs. Move all knob labels beneath controls. Add red glow to main doppler knob."
+  visual_style: "vintage/industrial"
+  parameter_count: 13
+  created: "2026-02-09"
+  changes_from_v7:
+    - "Main doppler knob: KEEP using f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png image (168px)"
+    - "Main doppler knob: ADD red glow effect (box-shadow)"
+    - "Main doppler label: MOVED beneath knob (was around knob)"
+    - "Surrounding knobs: REPLACED 195px images with 128px CSS conic gradient knobs"
+    - "Surrounding knobs: CSS style with alternating dark bands (#1e1e1e, #1a1a1a)"
+    - "Surrounding knobs: Red indicator line at top (3px × 20px)"
+    - "Surrounding knobs: Inset shadow for depth"
+    - "Tick marks: 11 ticks per knob, radial arrangement, -135° to +135°"
+    - "Tick marks: Red color (#F21A1D), 1-2px width, 8-10px length"
+    - "Tick labels: Black text beside ticks, 10-12px font, parameter values"
+    - "Value displays: Red LED readout beneath each knob"
+    - "Value displays: Dark background (#0a0a0a), red monospace text (#F21A1D)"
+    - "Value displays: Show current value + units (e.g., '50%', '-12 dB')"
+    - "All knob labels: Moved beneath knobs (above value displays)"
+    - "Layout adjusted: Knob Y positions to accommodate labels + value displays beneath"
+    - "Bypass buttons: UNCHANGED (44px diameter, vertical stack)"
+    - "VU meters: UNCHANGED (right side, dual L/R)"
+    - "Advanced settings: UNCHANGED (bottom, grain_size + grain_overlap)"
+    - "Background texture: UNCHANGED (diamond plate)"
+    - "Corner screws: UNCHANGED (red screws at 4 corners)"
+    - "Title: UNCHANGED ('RED SHIFT', Jacquard 12, 60px)"
+    - "Subtitle: UNCHANGED ('digital delay', Handjet, 28px)"
