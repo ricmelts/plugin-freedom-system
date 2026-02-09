@@ -1,0 +1,214 @@
+window:
+  width: 900
+  height: 650
+  resizable: false
+
+controls:
+  # Center doppler shift knob (primary control)
+  - id: doppler_shift
+    type: slider
+    position: { x: 338, y: 213 }
+    size: { diameter: 224 }
+    range: [-50.0, 50.0]
+    default: 0.0
+    label: "doppler effect delay"
+    unit: "%"
+
+  # Surrounding knobs (radial arrangement)
+  # Top-left (10 o'clock) - Stereo Width
+  - id: stereo_width
+    type: slider
+    position: { x: 175, y: 135 }
+    size: { diameter: 86 }
+    range: [0.0, 200.0]
+    default: 100.0
+    label: "stereo width"
+    unit: "%"
+
+  # Top-center (12 o'clock) - Feedback
+  - id: feedback
+    type: slider
+    position: { x: 685, y: 135 }
+    size: { diameter: 86 }
+    range: [0.0, 100.0]
+    default: 0.0
+    label: "feedback"
+    unit: "%"
+
+  # Top-right (2 o'clock) - Master Output
+  - id: master_output
+    type: slider
+    position: { x: 639, y: 135 }
+    size: { diameter: 86 }
+    range: [-60.0, 12.0]
+    default: 0.0
+    label: "master"
+    unit: "dB"
+
+  # Bottom-left (8 o'clock) - Lo-Cut Filter
+  - id: lo_cut_filter
+    type: slider
+    position: { x: 175, y: 429 }
+    size: { diameter: 86 }
+    range: [20.0, 1000.0]
+    default: 20.0
+    label: "hi/lo filter"
+    unit: "Hz"
+
+  # Bottom-center (6 o'clock) - Saturation
+  - id: saturation
+    type: slider
+    position: { x: 407, y: 484 }
+    size: { diameter: 86 }
+    range: [0.0, 100.0]
+    default: 0.0
+    label: "saturation"
+    unit: "%"
+
+  # Bottom-right (4 o'clock) - Hi-Cut Filter
+  - id: hi_cut_filter
+    type: slider
+    position: { x: 639, y: 429 }
+    size: { diameter: 86 }
+    range: [1000.0, 20000.0]
+    default: 20000.0
+    label: "time"
+    unit: "Hz"
+
+  # Bypass controls (left side vertical stack)
+  - id: bypass_doppler
+    type: toggle
+    position: { x: 30, y: 200 }
+    size: { diameter: 38 }
+    default: false
+    label: "Doppler"
+
+  - id: bypass_saturation
+    type: toggle
+    position: { x: 30, y: 270 }
+    size: { diameter: 38 }
+    default: false
+    label: "Saturation"
+
+  - id: bypass_filters
+    type: toggle
+    position: { x: 30, y: 340 }
+    size: { diameter: 38 }
+    default: false
+    label: "Filters"
+
+  - id: bypass_feedback
+    type: toggle
+    position: { x: 30, y: 410 }
+    size: { diameter: 38 }
+    default: false
+    label: "Feedback"
+
+  # Advanced settings (collapsible)
+  - id: grain_size
+    type: slider
+    position: { x: 750, y: 580 }
+    size: { width: 120, height: 30 }
+    range: [25.0, 200.0]
+    default: 50.0
+    label: "Grain Size"
+    unit: "ms"
+
+  - id: grain_overlap
+    type: combo
+    position: { x: 750, y: 620 }
+    size: { width: 120, height: 35 }
+    options: ["2x", "4x"]
+    default: 0
+    label: "Grain Overlap"
+
+styling:
+  colors:
+    background: "#888888"
+    panel_border: "#000000"
+    text_primary: "#000000"
+    text_glow: "#bd0000"
+    accent: "#F21A1D"
+    knob_fill: "#D9D9D9"
+    knob_fill_opacity: 0.5
+    knob_stroke: "#000000"
+    indicator: "#333333"
+    button_gradient_start: "#D9D9D9"
+    button_gradient_end: "#888986"
+    led_active: "#F21A1D"
+
+  fonts:
+    title: "'Jacquard 12', sans-serif"
+    label: "'Handjet', sans-serif"
+
+  effects:
+    label_glow: "0px -7px 50px #bd0000"
+    title_glow: "-2px 2px 2px #bd0000, 0px 2px 50px #bd0000"
+    border_width: "7.5px"
+    screw_size: "30px"
+
+  layout:
+    edge_padding: 20
+    control_spacing: 15
+
+visual_elements:
+  - type: background_texture
+    asset: "diamondplate.png"
+    style: "cover"
+
+  - type: corner_screws
+    positions:
+      - { x: 20, y: 20 }
+      - { x: 20, y: 610 }
+      - { x: 860, y: 20 }
+      - { x: 860, y: 610 }
+    size: 30
+
+  - type: barrier_lines
+    lines:
+      - { from: { x: 250, y: 525 }, to: { x: 400, y: 525 }, width: 10 }
+      - { from: { x: 500, y: 525 }, to: { x: 650, y: 525 }, width: 10 }
+      - { from: { x: 320, y: 300 }, to: { x: 320, y: 150 }, width: 10 }
+      - { from: { x: 580, y: 300 }, to: { x: 580, y: 150 }, width: 10 }
+    glow: "drop-shadow(0px 2px 50px #bd0000)"
+
+  - type: title
+    text: "RED SHIFT"
+    position: { x: 450, y: 70 }
+    font_size: 72
+    font_family: "'Jacquard 12', sans-serif"
+    color: "#000000"
+    text_shadow: "-2px 2px 2px #bd0000, 0px 2px 50px #bd0000"
+    transform: "uppercase"
+
+  - type: subtitle
+    text: "digital delay"
+    position: { x: 450, y: 610 }
+    font_size: 40
+    font_family: "'Handjet', sans-serif"
+    font_weight: 300
+    color: "#000000"
+    text_shadow: "0px -7px 50px #bd0000"
+
+  - type: vu_meter
+    position: { x: 820, y: 175 }
+    size: { width: 50, height: 300 }
+    orientation: "vertical"
+    style: "led_bar"
+    gradient: ["#00ff00", "#ffff00", "#ff0000"]
+    animation: "reactive_particles"
+
+metadata:
+  version: 4
+  plugin_name: "RedShiftDistortion"
+  design_intent: "Industrial metal hardware with diamond plate texture, radial knob layout, static labels"
+  visual_style: "vintage/industrial"
+  parameter_count: 13
+  created: "2026-02-08"
+  changes_from_v3:
+    - "Restored Jacquard 12 + Handjet fonts from v1"
+    - "Implemented static knob labels (do not rotate with value)"
+    - "Fixed VU meter position to be visible within 900x650px bounds"
+    - "Added actual diamondplate.png background texture"
+    - "Matched reference HTML layout proportions (scaled from 2096x1050)"
+    - "Added corner screws and barrier lines with red glow effects"
