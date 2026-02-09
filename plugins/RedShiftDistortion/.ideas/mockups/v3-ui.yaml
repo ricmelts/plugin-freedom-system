@@ -1,0 +1,233 @@
+window:
+  width: 900
+  height: 650
+  resizable: false
+
+controls:
+  # CENTER - Primary doppler shift knob (scaled to 0.8: 280px → 224px)
+  - id: doppler_shift
+    type: slider
+    position: { x: 338, y: 213 }
+    size: { width: 224, height: 224 }
+    range: [-50.0, 50.0]
+    default: 0.0
+    label: "DOPPLER SHIFT"
+    units: "%"
+    primary: true
+
+  # RADIAL ARRANGEMENT - 6 knobs scaled by factor of 2 (140-160px → 70-80px)
+  # Top arc (12 o'clock, 2 o'clock, 10 o'clock positions)
+  - id: feedback
+    type: slider
+    position: { x: 410, y: 80 }
+    size: { width: 80, height: 80 }
+    range: [0.0, 95.0]
+    default: 0.0
+    label: "FEEDBACK"
+    units: "%"
+
+  - id: master_output
+    type: slider
+    position: { x: 570, y: 150 }
+    size: { width: 80, height: 80 }
+    range: [-60.0, 12.0]
+    default: 0.0
+    label: "MASTER OUTPUT"
+    units: "dB"
+
+  - id: stereo_width
+    type: slider
+    position: { x: 250, y: 150 }
+    size: { width: 80, height: 80 }
+    range: [-100.0, 100.0]
+    default: 0.0
+    label: "STEREO WIDTH"
+    units: "%"
+
+  # Bottom arc (6 o'clock, 4 o'clock, 8 o'clock positions)
+  - id: saturation
+    type: slider
+    position: { x: 410, y: 490 }
+    size: { width: 80, height: 80 }
+    range: [-12.0, 24.0]
+    default: 0.0
+    label: "SATURATION"
+    units: "dB"
+
+  - id: filter_band_high
+    type: slider
+    position: { x: 570, y: 420 }
+    size: { width: 80, height: 80 }
+    range: [20.0, 20000.0]
+    default: 8000.0
+    label: "HI-CUT"
+    units: "Hz"
+    scale: logarithmic
+
+  - id: filter_band_low
+    type: slider
+    position: { x: 250, y: 420 }
+    size: { width: 80, height: 80 }
+    range: [20.0, 20000.0]
+    default: 100.0
+    label: "LO-CUT"
+    units: "Hz"
+    scale: logarithmic
+
+  # Bypass toggles (VERTICAL ARRANGEMENT on left side, scaled by 2: 75px → 37px)
+  - id: bypass_stereo_width
+    type: toggle
+    position: { x: 60, y: 150 }
+    size: { width: 37, height: 37 }
+    default: false
+    label: "BYPASS STEREO"
+
+  - id: bypass_delay
+    type: toggle
+    position: { x: 60, y: 230 }
+    size: { width: 37, height: 37 }
+    default: false
+    label: "BYPASS DELAY"
+
+  - id: bypass_doppler
+    type: toggle
+    position: { x: 60, y: 310 }
+    size: { width: 37, height: 37 }
+    default: false
+    label: "BYPASS DOPPLER"
+
+  - id: bypass_saturation
+    type: toggle
+    position: { x: 60, y: 390 }
+    size: { width: 37, height: 37 }
+    default: false
+    label: "BYPASS SAT"
+
+  # Advanced settings (collapsible panel on right side)
+  - id: grain_size
+    type: slider
+    position: { x: 775, y: 485 }
+    size: { width: 100, height: 30 }
+    range: [25.0, 200.0]
+    default: 100.0
+    label: "Grain Size"
+    units: "ms"
+    advanced: true
+
+  - id: grain_overlap
+    type: combo
+    position: { x: 775, y: 540 }
+    size: { width: 100, height: 35 }
+    options: ["2x", "4x"]
+    default: 1
+    label: "Grain Overlap"
+    advanced: true
+
+styling:
+  colors:
+    background: "#888888"
+    foreground: "#ffffff"
+    accent: "#BD0000"
+    accent_bright: "#F21A1D"
+    panel_border: "#000000"
+    knob_fill: "#D9D9D9"
+    knob_stroke: "#000000"
+    text_glow: "#BD0000"
+
+  fonts:
+    title: "Jacquard 12, sans-serif"
+    label: "Handjet, sans-serif"
+
+  special:
+    diamond_plate_texture: true
+    metal_screws: true
+    red_glow_effects: true
+    radial_symmetry: true
+
+layout:
+  sections:
+    - name: title
+      position: { x: 450, y: 15 }
+      height: 50
+
+    - name: radial_controls
+      position: { x: 450, y: 325 }
+      radius: 160
+      layout: radial
+
+    - name: bypass_column
+      position: { x: 60, y: 150 }
+      layout: vertical
+      spacing: 43
+
+    - name: advanced_panel
+      position: { x: 760, y: 460 }
+      width: 130
+      height: 130
+      collapsible: true
+
+    - name: vu_meter
+      position: { x: 835, y: 120 }
+      width: 50
+      height: 400
+
+visual_elements:
+  - type: background_texture
+    source: diamond_plate
+    opacity: 1.0
+    layer: background
+
+  - type: metal_panel
+    position: { x: 15, y: 15 }
+    size: { width: 870, height: 620 }
+    border_width: 7.5
+    border_color: "#000000"
+    drop_shadow: true
+
+  - type: screw
+    positions:
+      - { x: 25, y: 25 }
+      - { x: 850, y: 25 }
+      - { x: 25, y: 610 }
+      - { x: 850, y: 610 }
+    size: { width: 35, height: 35 }
+    style: inset_shadow
+
+  - type: title_text
+    text: "RED SHIFT"
+    position: { x: 450, y: 35 }
+    font: "Jacquard 12"
+    size: 48
+    color: "#000000"
+    text_shadow: "-2px 2px 2px #BD0000, 0px 2px 50px #BD0000"
+    align: center
+
+  - type: subtitle_text
+    text: "doppler effect delay"
+    position: { x: 450, y: 625 }
+    font: "Handjet"
+    size: 20
+    color: "#ffffff"
+    text_shadow: "0px -7px 50px #BD0000"
+    align: center
+
+vu_meter:
+  position: { x: 835, y: 120 }
+  size: { width: 50, height: 400 }
+  style: vertical_led_bar
+  led_count: 40
+  colors:
+    low: "#00ff00"
+    mid: "#ffff00"
+    high: "#ff0000"
+  particle_effects: true
+  glow: "#BD0000"
+  reactive: true
+
+advanced_panel:
+  collapsible: true
+  collapsed_label: "ADV"
+  expanded_height: 130
+  background_color: "#666666"
+  border: "2px solid #333333"
+  position: { x: 760, y: 460 }

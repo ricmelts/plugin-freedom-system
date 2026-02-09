@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedShiftDistortion UI Mockup v3</title>
+
+  <style>
+    /* CRITICAL: WebView constraints */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: default;
+      overflow: hidden;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Fixed-size plugin frame (test preview) */
+    .plugin-frame {
+      width: 900px;
+      height: 650px;
+      border: 2px solid #444;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      overflow: hidden;
+      position: relative;
+      background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23888888" width="100" height="100"/><path d="M0,0 L10,10 M90,0 L100,10 M0,90 L10,100 M90,90 L100,100" stroke="%23999999" stroke-width="1"/></svg>');
+      background-color: #888888;
+    }
+
+    /* Metal panel */
+    .metal-panel {
+      position: absolute;
+      left: 15px;
+      top: 15px;
+      width: 870px;
+      height: 620px;
+      border: 7.5px solid #000000;
+      filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
+      background: rgba(136, 136, 136, 0.3);
+    }
+
+    /* Corner screws */
+    .screw {
+      position: absolute;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #aaa, #555);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+    }
+    .screw::before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 2px;
+      background: #333;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    /* Title */
+    .title {
+      position: absolute;
+      top: 35px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Courier New', monospace;
+      font-size: 48px;
+      font-weight: bold;
+      color: #000000;
+      text-shadow: -2px 2px 2px #BD0000, 0px 2px 50px #BD0000;
+      letter-spacing: 8px;
+    }
+
+    /* Subtitle */
+    .subtitle {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: Arial, sans-serif;
+      font-size: 20px;
+      color: #ffffff;
+      text-shadow: 0px -7px 50px #BD0000;
+      letter-spacing: 2px;
+    }
+
+    /* Knob container */
+    .knob {
+      position: absolute;
+      transform-origin: center center;
+      transition: transform 50ms ease-out;
+      cursor: pointer;
+    }
+
+    /* Knob body (rotates) */
+    .knob-body {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, #D9D9D9, #888986);
+      border: 2.5px solid #000000;
+      position: relative;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    }
+
+    /* Knob center glow */
+    .knob-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40%;
+      height: 40%;
+      border-radius: 50%;
+      background: radial-gradient(circle, #BD0000, #8B0000);
+      box-shadow:
+        0 0 10px #BD0000,
+        0 0 20px #BD0000,
+        inset 0 2px 4px rgba(255,255,255,0.3);
+    }
+
+    /* Knob indicator needle */
+    .knob-indicator {
+      position: absolute;
+      top: 8%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 30%;
+      background: #333;
+      border-radius: 2px;
+    }
+
+    /* Knob label */
+    .knob-label {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 8px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      color: #ffffff;
+      text-shadow: 0px -7px 50px #BD0000;
+      white-space: nowrap;
+      letter-spacing: 1px;
+    }
+
+    /* Primary doppler knob (larger) */
+    .knob-primary .knob-body {
+      background: radial-gradient(circle at 40% 40%, #D9D9D9, #666666);
+      border-width: 4px;
+    }
+    .knob-primary .knob-center {
+      width: 25%;
+      height: 25%;
+      box-shadow:
+        0 0 20px #BD0000,
+        0 0 40px #BD0000,
+        0 0 60px rgba(189, 0, 0, 0.5),
+        inset 0 2px 6px rgba(255,255,255,0.3);
+    }
+    .knob-primary .knob-label {
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 12px;
+    }
+
+    /* Toggle button (circular) */
+    .toggle {
+      position: absolute;
+      width: 37px;
+      height: 37px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #D9D9D9, #888986);
+      border: 2px solid #BD0000;
+      cursor: pointer;
+      transition: all 100ms;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .toggle.active {
+      background: linear-gradient(135deg, #F21A1D, #BD0000);
+      box-shadow: 0 0 10px #F21A1D, 0 0 20px #BD0000, 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Toggle LED indicator */
+    .toggle-led {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #333;
+      transition: all 100ms;
+    }
+    .toggle.active .toggle-led {
+      background: #F21A1D;
+      box-shadow: 0 0 6px #F21A1D, 0 0 12px #BD0000;
+    }
+
+    /* Toggle label */
+    .toggle-label {
+      position: absolute;
+      left: 45px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      color: #ffffff;
+      text-shadow: 0px -5px 30px #BD0000;
+      white-space: nowrap;
+      letter-spacing: 0.5px;
+    }
+
+    /* Slider (horizontal) */
+    .slider-container {
+      position: absolute;
+    }
+    .slider {
+      width: 100%;
+      height: 30px;
+      -webkit-appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    .slider::-webkit-slider-track {
+      height: 6px;
+      background: linear-gradient(to right, #333, #666);
+      border-radius: 3px;
+      border: 1px solid #000;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, #D9D9D9, #888986);
+      border: 2px solid #BD0000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 0 8px #BD0000;
+    }
+    .slider-label {
+      position: absolute;
+      top: -18px;
+      left: 0;
+      font-size: 11px;
+      color: #ffffff;
+      text-shadow: 0px -5px 30px #BD0000;
+    }
+
+    /* Combo box */
+    .combo {
+      position: absolute;
+      height: 35px;
+      background: linear-gradient(135deg, #D9D9D9, #888986);
+      border: 2px solid #BD0000;
+      border-radius: 4px;
+      color: #ffffff;
+      font-size: 14px;
+      padding: 0 8px;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .combo-label {
+      position: absolute;
+      top: -18px;
+      left: 0;
+      font-size: 11px;
+      color: #ffffff;
+      text-shadow: 0px -5px 30px #BD0000;
+    }
+
+    /* Advanced panel */
+    .advanced-panel {
+      position: absolute;
+      left: 760px;
+      top: 460px;
+      width: 130px;
+      height: 130px;
+      background: #666666;
+      border: 2px solid #333333;
+      padding: 10px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .advanced-label {
+      font-size: 10px;
+      color: #BD0000;
+      text-shadow: 0 0 5px #BD0000;
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+
+    /* VU Meter */
+    .vu-meter {
+      position: absolute;
+      left: 835px;
+      top: 120px;
+      width: 50px;
+      height: 400px;
+      background: #222;
+      border: 2px solid #000;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+    }
+    .vu-meter-fill {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 0%;
+      background: linear-gradient(to top, #00ff00, #ffff00 50%, #ff0000);
+      transition: height 100ms;
+      box-shadow: 0 0 20px #BD0000;
+    }
+
+    /* Debug monitor */
+    .debug-monitor {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 8px 12px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      min-width: 150px;
+      pointer-events: none;
+      z-index: 10000;
+    }
+    .debug-label {
+      color: #666;
+      font-size: 9px;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+    .debug-param {
+      font-weight: bold;
+      color: #0f0;
+    }
+    .debug-value {
+      color: #fff;
+      margin-top: 2px;
+    }
+    .debug-normalized {
+      color: #888;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Fixed preview frame -->
+  <div class="plugin-frame">
+    <!-- Metal panel -->
+    <div class="metal-panel"></div>
+
+    <!-- Corner screws -->
+    <div class="screw" style="left: 25px; top: 25px;"></div>
+    <div class="screw" style="right: 25px; top: 25px;"></div>
+    <div class="screw" style="left: 25px; bottom: 25px;"></div>
+    <div class="screw" style="right: 25px; bottom: 25px;"></div>
+
+    <!-- Title -->
+    <div class="title">RED SHIFT</div>
+    <div class="subtitle">doppler effect delay</div>
+
+    <!-- CENTER - Primary doppler shift knob (224px) -->
+    <div class="knob knob-primary" id="doppler_shift" style="left: 338px; top: 213px; width: 224px; height: 224px;">
+      <div class="knob-body">
+        <div class="knob-center"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-label">DOPPLER SHIFT</div>
+    </div>
+
+    <!-- RADIAL KNOBS (80px) -->
+    <!-- Top arc -->
+    <div class="knob" id="feedback" style="left: 410px; top: 80px; width: 80px; height: 80px;">
+      <div class="knob-body">
+        <div class="knob-center"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-label">FEEDBACK</div>
+    </div>
+
+    <div class="knob" id="master_output" style="left: 570px; top: 150px; width: 80px; height: 80px;">
+      <div class="knob-body">
+        <div class="knob-center"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-label">MASTER</div>
+    </div>
+
+    <div class="knob" id="stereo_width" style="left: 250px; top: 150px; width: 80px; height: 80px;">
+      <div class="knob-body">
+        <div class="knob-center"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-label">STEREO WIDTH</div>
+    </div>
+
+    <!-- Bottom arc -->
+    <div class="knob" id="saturation" style="left: 410px; top: 490px; width: 80px; height: 80px;">
+      <div class="knob-body">
+        <div class="knob-center"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-label">SATURATION</div>
+    </div>
+
+    <div class="knob" id="filter_band_high" style="left: 570px; top: 420px; width: 80px; height: 80px;">
+      <div class="knob-body">
+        <div class="knob-center"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-label">HI-CUT</div>
+    </div>
+
+    <div class="knob" id="filter_band_low" style="left: 250px; top: 420px; width: 80px; height: 80px;">
+      <div class="knob-body">
+        <div class="knob-center"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-label">LO-CUT</div>
+    </div>
+
+    <!-- BYPASS TOGGLES (VERTICAL, 37px) -->
+    <div class="toggle" id="bypass_stereo_width" style="left: 60px; top: 150px;">
+      <div class="toggle-led"></div>
+      <div class="toggle-label">BYPASS STEREO</div>
+    </div>
+
+    <div class="toggle" id="bypass_delay" style="left: 60px; top: 230px;">
+      <div class="toggle-led"></div>
+      <div class="toggle-label">BYPASS DELAY</div>
+    </div>
+
+    <div class="toggle" id="bypass_doppler" style="left: 60px; top: 310px;">
+      <div class="toggle-led"></div>
+      <div class="toggle-label">BYPASS DOPPLER</div>
+    </div>
+
+    <div class="toggle" id="bypass_saturation" style="left: 60px; top: 390px;">
+      <div class="toggle-led"></div>
+      <div class="toggle-label">BYPASS SAT</div>
+    </div>
+
+    <!-- ADVANCED PANEL -->
+    <div class="advanced-panel">
+      <div class="advanced-label">ADVANCED</div>
+
+      <div class="slider-container" style="position: relative; top: 5px;">
+        <div class="slider-label">Grain Size</div>
+        <input type="range" class="slider" id="grain_size" min="0" max="1" step="0.01" value="0.5" style="width: 100px;" />
+      </div>
+
+      <div style="position: relative; top: 20px;">
+        <div class="combo-label">Grain Overlap</div>
+        <select class="combo" id="grain_overlap" style="width: 100px;">
+          <option value="0">2x</option>
+          <option value="1" selected>4x</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- VU METER -->
+    <div class="vu-meter">
+      <div class="vu-meter-fill" id="vuMeterFill"></div>
+    </div>
+  </div>
+
+  <!-- Debug monitor -->
+  <div class="debug-monitor">
+    <div class="debug-label">PARAMETER MONITOR</div>
+    <div class="debug-param" id="debugParam">—</div>
+    <div class="debug-value" id="debugValue">—</div>
+    <div class="debug-normalized" id="debugNormalized">—</div>
+  </div>
+
+  <script>
+    // Mock JUCE backend
+    window.Juce = {
+      getSliderState: (id) => ({
+        normalisedValue: 0.5,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        },
+        setNormalisedValue: (v) => console.log(`${id} = ${v}`)
+      }),
+      getToggleState: (id) => ({
+        value: false,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        },
+        setValue: (v) => console.log(`${id} = ${v}`)
+      }),
+      getComboBoxState: (id) => ({
+        selectedId: 1,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        },
+        setSelectedId: (v) => console.log(`${id} = ${v}`)
+      })
+    };
+
+    // Disable context menu
+    document.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      return false;
+    });
+
+    // Parameter ranges
+    const paramRanges = {
+      doppler_shift: { min: -50, max: 50, unit: '%', default: 0 },
+      feedback: { min: 0, max: 95, unit: '%', default: 0 },
+      master_output: { min: -60, max: 12, unit: 'dB', default: 0 },
+      stereo_width: { min: -100, max: 100, unit: '%', default: 0 },
+      saturation: { min: -12, max: 24, unit: 'dB', default: 0 },
+      filter_band_high: { min: 20, max: 20000, unit: 'Hz', default: 8000, log: true },
+      filter_band_low: { min: 20, max: 20000, unit: 'Hz', default: 100, log: true },
+      grain_size: { min: 25, max: 200, unit: 'ms', default: 100 }
+    };
+
+    // Format value
+    function formatValue(paramId, value) {
+      const range = paramRanges[paramId];
+      if (!range) return value.toFixed(2);
+      return `${value.toFixed(1)}${range.unit}`;
+    }
+
+    // Update debug monitor
+    function updateDebugMonitor(paramId, value, normalizedValue) {
+      document.getElementById('debugParam').textContent = paramId;
+      document.getElementById('debugValue').textContent = formatValue(paramId, value);
+      document.getElementById('debugNormalized').textContent = `${(normalizedValue * 100).toFixed(1)}%`;
+    }
+
+    // Knob rotation
+    function setupKnob(knobId) {
+      const knob = document.getElementById(knobId);
+      const range = paramRanges[knobId];
+      if (!knob || !range) return;
+
+      let isDragging = false;
+      let startY = 0;
+      let startValue = 0.5;
+
+      knob.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const deltaY = startY - e.clientY;
+        const sensitivity = 0.005;
+        let newValue = startValue + (deltaY * sensitivity);
+        newValue = Math.max(0, Math.min(1, newValue));
+
+        // Update rotation
+        const degrees = -135 + (newValue * 270);
+        knob.style.transform = `rotate(${degrees}deg)`;
+
+        // Calculate actual value
+        let actualValue;
+        if (range.log) {
+          const logMin = Math.log(range.min);
+          const logMax = Math.log(range.max);
+          actualValue = Math.exp(logMin + newValue * (logMax - logMin));
+        } else {
+          actualValue = range.min + newValue * (range.max - range.min);
+        }
+
+        updateDebugMonitor(knobId, actualValue, newValue);
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          startValue = parseFloat((startY - startY + startValue).toFixed(3));
+        }
+        isDragging = false;
+      });
+
+      // Initialize to default
+      const defaultNorm = (range.default - range.min) / (range.max - range.min);
+      const degrees = -135 + (defaultNorm * 270);
+      knob.style.transform = `rotate(${degrees}deg)`;
+    }
+
+    // Toggle buttons
+    function setupToggle(toggleId) {
+      const toggle = document.getElementById(toggleId);
+      if (!toggle) return;
+
+      let active = false;
+      toggle.addEventListener('click', () => {
+        active = !active;
+        if (active) {
+          toggle.classList.add('active');
+        } else {
+          toggle.classList.remove('active');
+        }
+        updateDebugMonitor(toggleId, active ? 'ON' : 'OFF', active ? 1 : 0);
+      });
+    }
+
+    // Slider
+    function setupSlider(sliderId) {
+      const slider = document.getElementById(sliderId);
+      const range = paramRanges[sliderId];
+      if (!slider || !range) return;
+
+      slider.addEventListener('input', (e) => {
+        const normalized = parseFloat(e.target.value);
+        const actualValue = range.min + normalized * (range.max - range.min);
+        updateDebugMonitor(sliderId, actualValue, normalized);
+      });
+
+      // Initialize
+      const defaultNorm = (range.default - range.min) / (range.max - range.min);
+      slider.value = defaultNorm;
+    }
+
+    // Combo box
+    function setupCombo(comboId) {
+      const combo = document.getElementById(comboId);
+      if (!combo) return;
+
+      combo.addEventListener('change', (e) => {
+        const value = e.target.options[e.target.selectedIndex].text;
+        updateDebugMonitor(comboId, value, parseInt(e.target.value) / (e.target.options.length - 1));
+      });
+    }
+
+    // VU meter animation
+    function animateVUMeter() {
+      const fill = document.getElementById('vuMeterFill');
+      const randomLevel = Math.random() * 0.6 + 0.2;
+      fill.style.height = (randomLevel * 100) + '%';
+      setTimeout(animateVUMeter, 100);
+    }
+
+    // Initialize controls
+    document.addEventListener('DOMContentLoaded', () => {
+      // Knobs
+      setupKnob('doppler_shift');
+      setupKnob('feedback');
+      setupKnob('master_output');
+      setupKnob('stereo_width');
+      setupKnob('saturation');
+      setupKnob('filter_band_high');
+      setupKnob('filter_band_low');
+
+      // Toggles
+      setupToggle('bypass_stereo_width');
+      setupToggle('bypass_delay');
+      setupToggle('bypass_doppler');
+      setupToggle('bypass_saturation');
+
+      // Advanced
+      setupSlider('grain_size');
+      setupCombo('grain_overlap');
+
+      // VU meter
+      animateVUMeter();
+
+      console.log('RedShiftDistortion v3 UI mockup loaded');
+    });
+  </script>
+</body>
+</html>
