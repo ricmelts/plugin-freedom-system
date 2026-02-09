@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedShiftDistortion UI Mockup v7</title>
+
+  <style>
+    /* CRITICAL: WebView constraints */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      /* Native application feel */
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: default;
+      overflow: hidden;
+
+      /* Centering for test preview */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      min-height: 100%;
+    }
+
+    /* Fixed-size preview frame */
+    .plugin-frame {
+      width: 950px;
+      height: 700px;
+      border: 2px solid #444;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      overflow: hidden;
+      position: relative;
+      background: #2a2a2a;
+    }
+
+    /* Import fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Handjet:wght@100..900&family=Jacquard+12&display=swap');
+
+    /* Container fills frame */
+    .container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background texture */
+    .background-texture {
+      position: absolute;
+      inset: 0;
+      background-image: url('../../assets/00fa754f6e134fb61f5e452b7ba8415e529dd82a.png');
+      background-size: cover;
+      background-position: center;
+      z-index: 0;
+    }
+
+    /* Corner screws */
+    .corner-screw {
+      position: absolute;
+      width: 38px;
+      height: 38px;
+      background-image: url('../../assets/4287f6bace032d3fb347fc04a01722012ff802a1.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      z-index: 10;
+    }
+
+    .corner-screw.top-left { top: 20px; left: 20px; }
+    .corner-screw.top-right { top: 20px; right: 20px; }
+    .corner-screw.bottom-left { bottom: 20px; left: 20px; }
+    .corner-screw.bottom-right { bottom: 20px; right: 20px; }
+
+    /* Title */
+    .title {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Jacquard 12', sans-serif;
+      font-size: 60px;
+      color: #000000;
+      text-shadow: -2px 2px 2px #bd0000, 0px 2px 50px #bd0000;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      z-index: 5;
+    }
+
+    /* Subtitle - MOVED LEFT and consistent 28px Handjet size */
+    .subtitle {
+      position: absolute;
+      bottom: 40px;
+      left: 235px;
+      font-family: 'Handjet', sans-serif;
+      font-size: 28px;
+      font-weight: 300;
+      color: #000000;
+      text-shadow: 0px -7px 50px #bd0000;
+      text-transform: uppercase;
+      z-index: 5;
+    }
+
+    /* Knob container */
+    .knob {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      z-index: 3;
+    }
+
+    /* Knob body - rotates */
+    .knob-body {
+      position: relative;
+      border-radius: 50%;
+      transition: transform 50ms ease-out;
+      transform-origin: center center;
+    }
+
+    /* Center doppler knob - 168px diameter (UNCHANGED) */
+    .knob.doppler .knob-body {
+      width: 168px;
+      height: 168px;
+      background: radial-gradient(circle at 30% 30%, #D9D9D9, #666666);
+      border: 3px solid #000000;
+      box-shadow:
+        inset -3px -3px 8px rgba(0,0,0,0.6),
+        inset 3px 3px 8px rgba(255,255,255,0.3),
+        0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    /* Surrounding knobs - 195px diameter (×1.5 from 130px) */
+    .knob.surrounding .knob-body {
+      width: 195px;
+      height: 195px;
+      background-image: url('../../assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png');
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* Knob indicator */
+    .knob-indicator {
+      position: absolute;
+      width: 6px;
+      height: 30%;
+      background: #333333;
+      border-radius: 3px;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Knob labels - CONSISTENT 28px Handjet size */
+    .knob-label {
+      font-family: 'Handjet', sans-serif;
+      font-size: 28px;
+      font-weight: 300;
+      color: #000000;
+      text-shadow: 0px -7px 50px #bd0000;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* Value display */
+    .knob-value {
+      font-family: 'Handjet', sans-serif;
+      font-size: 18px;
+      color: #000000;
+      text-align: center;
+    }
+
+    /* Bypass buttons - 44px diameter (×1.5 from 29px) */
+    .bypass-button {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #D9D9D9, #888986);
+      border: 2px solid #000000;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+      transition: all 100ms ease;
+      z-index: 4;
+    }
+
+    .bypass-button:hover {
+      transform: scale(1.05);
+    }
+
+    .bypass-button:active {
+      transform: scale(0.95);
+    }
+
+    /* LED indicator - 18px diameter (×1.5 from 12px) */
+    .bypass-led {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #3a1a1a;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+      transition: all 150ms ease;
+    }
+
+    .bypass-button.active .bypass-led {
+      background: #F21A1D;
+      box-shadow:
+        0 0 12px #F21A1D,
+        0 0 24px rgba(242, 26, 29, 0.6),
+        inset 0 0 8px rgba(255,255,255,0.3);
+    }
+
+    /* Bypass labels */
+    .bypass-label {
+      position: absolute;
+      left: 80px;
+      font-family: 'Handjet', sans-serif;
+      font-size: 20px;
+      color: #000000;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Advanced settings - SIDE BY SIDE horizontally */
+    .advanced-settings {
+      position: absolute;
+      bottom: 27px;
+      left: 550px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      z-index: 5;
+    }
+
+    .advanced-control {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .advanced-label {
+      font-family: 'Handjet', sans-serif;
+      font-size: 16px;
+      color: #000000;
+      text-transform: uppercase;
+    }
+
+    .advanced-slider {
+      width: 90px;
+      height: 23px;
+      background: linear-gradient(180deg, #666, #333);
+      border: 1px solid #000;
+      border-radius: 3px;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .advanced-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 19px;
+      background: linear-gradient(180deg, #D9D9D9, #888986);
+      border: 1px solid #000;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    .advanced-dropdown {
+      width: 90px;
+      height: 26px;
+      background: linear-gradient(180deg, #666, #333);
+      border: 1px solid #000;
+      border-radius: 3px;
+      color: #fff;
+      font-family: 'Handjet', sans-serif;
+      font-size: 14px;
+      padding: 2px 6px;
+      cursor: pointer;
+    }
+
+    /* VU Meters - 50% opacity black background */
+    .vu-meters {
+      position: absolute;
+      top: 175px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      z-index: 4;
+    }
+
+    .vu-meter {
+      width: 40px;
+      height: 350px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #000;
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .vu-meter-fill {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: linear-gradient(to top,
+        #F21A1D 0%,
+        #F21A1D 100%
+      );
+      transition: height 100ms ease-out;
+    }
+
+    .vu-meter-label {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Handjet', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #000000;
+    }
+
+    /* Debug monitor */
+    .debug-monitor {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 8px 12px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      min-width: 200px;
+      pointer-events: none;
+      z-index: 10000;
+    }
+
+    .debug-label {
+      color: #666;
+      font-size: 9px;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+
+    .debug-param {
+      font-weight: bold;
+      color: #0f0;
+    }
+
+    .debug-value {
+      color: #fff;
+      margin-top: 2px;
+    }
+
+    .debug-normalized {
+      color: #888;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-frame">
+    <div class="container">
+      <!-- Background texture -->
+      <div class="background-texture"></div>
+
+      <!-- Corner screws -->
+      <div class="corner-screw top-left"></div>
+      <div class="corner-screw top-right"></div>
+      <div class="corner-screw bottom-left"></div>
+      <div class="corner-screw bottom-right"></div>
+
+      <!-- Title -->
+      <div class="title">RED SHIFT</div>
+
+      <!-- Subtitle - moved left -->
+      <div class="subtitle">digital delay</div>
+
+      <!-- Center doppler knob - 168px diameter (UNCHANGED) -->
+      <div class="knob doppler" style="left: 391px; top: 266px;">
+        <div class="knob-body" id="doppler_shift_body">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">doppler effect delay</div>
+        <div class="knob-value" id="doppler_shift_value">0.0%</div>
+      </div>
+
+      <!-- Surrounding knobs - 195px diameter (×1.5) -->
+      <!-- Stereo Width - Top-left -->
+      <div class="knob surrounding" style="left: 140px; top: 100px;">
+        <div class="knob-body" id="stereo_width_body">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">stereo width</div>
+        <div class="knob-value" id="stereo_width_value">0.0%</div>
+      </div>
+
+      <!-- Feedback - Top-center -->
+      <div class="knob surrounding" style="left: 377px; top: 60px;">
+        <div class="knob-body" id="feedback_body">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">feedback</div>
+        <div class="knob-value" id="feedback_value">0.0%</div>
+      </div>
+
+      <!-- Master Output - Top-right -->
+      <div class="knob surrounding" style="left: 615px; top: 100px;">
+        <div class="knob-body" id="master_output_body">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">master</div>
+        <div class="knob-value" id="master_output_value">0.0 dB</div>
+      </div>
+
+      <!-- Lo-Cut Filter - Bottom-left -->
+      <div class="knob surrounding" style="left: 140px; top: 445px;">
+        <div class="knob-body" id="lo_cut_filter_body">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">lo-cut</div>
+        <div class="knob-value" id="lo_cut_filter_value">100 Hz</div>
+      </div>
+
+      <!-- Saturation - Bottom-center -->
+      <div class="knob surrounding" style="left: 377px; top: 485px;">
+        <div class="knob-body" id="saturation_body">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">saturation</div>
+        <div class="knob-value" id="saturation_value">0.0 dB</div>
+      </div>
+
+      <!-- Hi-Cut Filter - Bottom-right -->
+      <div class="knob surrounding" style="left: 615px; top: 445px;">
+        <div class="knob-body" id="hi_cut_filter_body">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">hi-cut</div>
+        <div class="knob-value" id="hi_cut_filter_value">8000 Hz</div>
+      </div>
+
+      <!-- Bypass buttons - 44px diameter (×1.5) with 18px LEDs -->
+      <div class="bypass-button" id="bypass_doppler" style="left: 25px; top: 215px;">
+        <div class="bypass-led"></div>
+      </div>
+      <div class="bypass-label" style="top: 223px;">Doppler</div>
+
+      <div class="bypass-button" id="bypass_saturation" style="left: 25px; top: 285px;">
+        <div class="bypass-led"></div>
+      </div>
+      <div class="bypass-label" style="top: 293px;">Saturation</div>
+
+      <div class="bypass-button" id="bypass_filters" style="left: 25px; top: 355px;">
+        <div class="bypass-led"></div>
+      </div>
+      <div class="bypass-label" style="top: 363px;">Filters</div>
+
+      <div class="bypass-button" id="bypass_feedback" style="left: 25px; top: 425px;">
+        <div class="bypass-led"></div>
+      </div>
+      <div class="bypass-label" style="top: 433px;">Feedback</div>
+
+      <!-- Advanced settings - SIDE BY SIDE horizontally -->
+      <div class="advanced-settings">
+        <div class="advanced-control">
+          <div class="advanced-label">Grain Size</div>
+          <input type="range" id="grain_size" class="advanced-slider" min="25" max="200" value="50" />
+          <div class="knob-value" id="grain_size_value">50 ms</div>
+        </div>
+
+        <div class="advanced-control">
+          <div class="advanced-label">Grain Overlap</div>
+          <select id="grain_overlap" class="advanced-dropdown">
+            <option value="0">2x</option>
+            <option value="1" selected>4x</option>
+          </select>
+          <div class="knob-value" id="grain_overlap_value">4x</div>
+        </div>
+      </div>
+
+      <!-- VU Meters with 50% opacity black background -->
+      <div class="vu-meters">
+        <div class="vu-meter">
+          <div class="vu-meter-label">L</div>
+          <div class="vu-meter-fill" id="vu_meter_left" style="height: 30%;"></div>
+        </div>
+        <div class="vu-meter">
+          <div class="vu-meter-label">R</div>
+          <div class="vu-meter-fill" id="vu_meter_right" style="height: 30%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Debug monitor -->
+  <div class="debug-monitor">
+    <div class="debug-label">PARAMETER MONITOR</div>
+    <div class="debug-param" id="debugParam">—</div>
+    <div class="debug-value" id="debugValue">—</div>
+    <div class="debug-normalized" id="debugNormalized">—</div>
+  </div>
+
+  <script>
+    // Mock JUCE backend for browser testing
+    window.Juce = {
+      getSliderState: (id) => ({
+        normalisedValue: 0.5,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        }
+      }),
+      getToggleState: (id) => ({
+        value: false,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        }
+      }),
+      getComboBoxState: (id) => ({
+        selectedId: 0,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        }
+      })
+    };
+
+    // Disable context menu (REQUIRED)
+    document.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      return false;
+    });
+
+    // Knob parameters
+    const knobs = {
+      doppler_shift: { min: -50, max: 50, default: 0, unit: '%', neutral: 0 },
+      stereo_width: { min: -100, max: 100, default: 0, unit: '%', neutral: 0 },
+      feedback: { min: 0, max: 95, default: 0, unit: '%', neutral: -135 },
+      master_output: { min: -60, max: 12, default: 0, unit: ' dB', neutral: 0 },
+      lo_cut_filter: { min: 20, max: 20000, default: 100, unit: ' Hz', neutral: -135 },
+      saturation: { min: -12, max: 24, default: 0, unit: ' dB', neutral: 0 },
+      hi_cut_filter: { min: 20, max: 20000, default: 8000, unit: ' Hz', neutral: 0 }
+    };
+
+    // Initialize knobs
+    Object.keys(knobs).forEach(id => {
+      const config = knobs[id];
+      const body = document.getElementById(`${id}_body`);
+      const valueDisplay = document.getElementById(`${id}_value`);
+
+      let currentValue = config.default;
+      let isDragging = false;
+      let startY = 0;
+      let startValue = 0;
+
+      // Calculate rotation based on value
+      function updateKnob(value) {
+        const normalized = (value - config.min) / (config.max - config.min);
+        const degrees = -135 + (normalized * 270);
+        body.style.transform = `rotate(${degrees}deg)`;
+
+        // Format value display
+        let displayValue = value.toFixed(1);
+        if (id.includes('filter')) {
+          displayValue = Math.round(value);
+        }
+        valueDisplay.textContent = displayValue + config.unit;
+
+        updateDebugMonitor(id, value, normalized);
+      }
+
+      // Mouse down
+      body.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        startValue = currentValue;
+        body.style.cursor = 'grabbing';
+        e.preventDefault();
+      });
+
+      // Mouse move
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const deltaY = startY - e.clientY;
+        const range = config.max - config.min;
+        const sensitivity = range / 200;
+        const newValue = Math.max(config.min, Math.min(config.max, startValue + (deltaY * sensitivity)));
+
+        currentValue = newValue;
+        updateKnob(newValue);
+      });
+
+      // Mouse up
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          body.style.cursor = 'pointer';
+        }
+      });
+
+      // Initialize at default
+      updateKnob(config.default);
+    });
+
+    // Bypass buttons
+    const bypassButtons = ['bypass_doppler', 'bypass_saturation', 'bypass_filters', 'bypass_feedback'];
+    bypassButtons.forEach(id => {
+      const button = document.getElementById(id);
+      let active = false;
+
+      button.addEventListener('click', () => {
+        active = !active;
+        button.classList.toggle('active', active);
+        console.log(`${id}: ${active ? 'ON' : 'OFF'}`);
+      });
+    });
+
+    // Advanced settings
+    const grainSizeSlider = document.getElementById('grain_size');
+    const grainSizeValue = document.getElementById('grain_size_value');
+    grainSizeSlider.addEventListener('input', (e) => {
+      grainSizeValue.textContent = e.target.value + ' ms';
+      updateDebugMonitor('grain_size', e.target.value, (e.target.value - 25) / (200 - 25));
+    });
+
+    const grainOverlapDropdown = document.getElementById('grain_overlap');
+    const grainOverlapValue = document.getElementById('grain_overlap_value');
+    grainOverlapDropdown.addEventListener('change', (e) => {
+      const options = ['2x', '4x'];
+      grainOverlapValue.textContent = options[e.target.selectedIndex];
+      updateDebugMonitor('grain_overlap', options[e.target.selectedIndex], e.target.selectedIndex);
+    });
+
+    // VU meter animation
+    function animateVUMeters() {
+      const leftMeter = document.getElementById('vu_meter_left');
+      const rightMeter = document.getElementById('vu_meter_right');
+
+      setInterval(() => {
+        const leftLevel = 20 + Math.random() * 60;
+        const rightLevel = 20 + Math.random() * 60;
+        leftMeter.style.height = leftLevel + '%';
+        rightMeter.style.height = rightLevel + '%';
+      }, 100);
+    }
+
+    // Debug monitor
+    function updateDebugMonitor(paramId, value, normalizedValue) {
+      document.getElementById('debugParam').textContent = paramId;
+      document.getElementById('debugValue').textContent = typeof value === 'number' ? value.toFixed(2) : value;
+      document.getElementById('debugNormalized').textContent = `${(normalizedValue * 100).toFixed(1)}%`;
+    }
+
+    // Start animations
+    document.addEventListener('DOMContentLoaded', () => {
+      animateVUMeters();
+    });
+  </script>
+</body>
+</html>
