@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedShiftDistortion UI Mockup v2 - Radial Symmetry</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Handjet:wght@300;400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Jacquard+12&display=swap');
+
+    /* CRITICAL: WebView constraints - NO viewport units */
+    html, body {
+      height: 100%;  /* REQUIRED */
+      margin: 0;
+      padding: 0;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      /* Native application feel */
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: default;
+      overflow: hidden;
+
+      /* Preview frame styling */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      font-family: 'Handjet', sans-serif;
+    }
+
+    /* Fixed preview frame (test HTML only) */
+    .plugin-frame {
+      width: 900px;
+      height: 650px;
+      border: 2px solid #444;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      overflow: hidden;
+      position: relative;
+      background: #888888;
+    }
+
+    /* Diamond plate background texture */
+    .plugin-frame::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.03) 10px, rgba(0,0,0,0.03) 20px),
+        repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(0,0,0,0.03) 10px, rgba(0,0,0,0.03) 20px);
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Main panel with border */
+    .main-panel {
+      position: absolute;
+      left: 15px;
+      top: 15px;
+      width: 870px;
+      height: 620px;
+      border: 7.5px solid #000000;
+      box-shadow: 0px 2px 2px 0px rgba(0,0,0,0.25);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Corner screws */
+    .screw {
+      position: absolute;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #999, #555);
+      box-shadow: inset -1px -2px 2px 0px rgba(0,0,0,0.25);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .screw::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 2px;
+      background: #333;
+    }
+
+    /* Title text */
+    .title {
+      position: absolute;
+      left: 50%;
+      top: 35px;
+      transform: translateX(-50%);
+      font-family: 'Jacquard 12', sans-serif;
+      font-size: 48px;
+      font-weight: bold;
+      color: #000000;
+      text-shadow: -2px 2px 2px #BD0000, 0px 2px 50px #BD0000;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* Subtitle text */
+    .subtitle {
+      position: absolute;
+      left: 50%;
+      bottom: 10px;
+      transform: translateX(-50%);
+      font-family: 'Handjet', sans-serif;
+      font-size: 20px;
+      font-weight: 300;
+      color: #ffffff;
+      text-shadow: 0px -7px 50px #BD0000;
+      letter-spacing: 3px;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* Knob container */
+    .knob-container {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 2;
+    }
+
+    /* Knob label */
+    .knob-label {
+      font-family: 'Handjet', sans-serif;
+      font-size: 16px;
+      font-weight: 400;
+      color: #ffffff;
+      text-shadow: 0px -7px 50px #BD0000;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    /* Knob body (rotates with indicator) */
+    .knob {
+      position: relative;
+      border-radius: 50%;
+      cursor: pointer;
+      transform-origin: center center;
+      transition: transform 50ms ease-out;
+    }
+
+    /* Primary doppler knob styling */
+    .knob-primary {
+      width: 280px;
+      height: 280px;
+    }
+
+    .knob-primary::before {
+      content: '';
+      position: absolute;
+      inset: -45px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(189, 0, 0, 0.5) 0%, rgba(189, 0, 0, 0.2) 50%, transparent 70%);
+      filter: blur(20px);
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    .knob-primary::after {
+      content: '';
+      position: absolute;
+      inset: -25px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(189, 0, 0, 0.75) 0%, rgba(189, 0, 0, 0.4) 50%, transparent 70%);
+      filter: blur(15px);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .knob-primary .knob-circle {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(189, 0, 0, 0.9), rgba(189, 0, 0, 0.6));
+      border: 3px solid #000000;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5), inset -3px -3px 10px rgba(0,0,0,0.3);
+    }
+
+    .knob-primary .knob-indicator {
+      position: absolute;
+      top: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 80px;
+      background: #333333;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.7);
+      pointer-events: none;
+    }
+
+    /* Standard knob styling */
+    .knob-standard {
+      width: 160px;
+      height: 160px;
+    }
+
+    .knob-standard .knob-circle {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(217, 217, 217, 0.5);
+      border: 2.5px solid #000000;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.4), inset -2px -2px 6px rgba(0,0,0,0.2);
+    }
+
+    .knob-standard .knob-indicator {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 6px;
+      height: 50px;
+      background: #333333;
+      border-radius: 3px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.6);
+      pointer-events: none;
+    }
+
+    /* Value display */
+    .knob-value {
+      font-family: 'Handjet', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      color: #ffffff;
+      text-shadow: 0px 0px 8px #BD0000;
+      margin-top: 8px;
+      text-align: center;
+      pointer-events: none;
+      min-width: 80px;
+    }
+
+    /* Toggle button container */
+    .toggle-container {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 2;
+    }
+
+    /* Toggle button */
+    .toggle-button {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #D9D9D9 0%, #888986 100%);
+      border: 6px solid rgba(242, 26, 29, 0.375);
+      cursor: pointer;
+      position: relative;
+      transition: all 150ms ease;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    }
+
+    .toggle-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .toggle-button.active {
+      border-color: rgba(242, 26, 29, 0.75);
+      box-shadow: 0 0 20px rgba(189, 0, 0, 0.6), 0 3px 8px rgba(0,0,0,0.3);
+    }
+
+    /* LED indicator */
+    .led-indicator {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #333333;
+      border: 3px solid #000000;
+      transition: all 150ms ease;
+    }
+
+    .toggle-button.active .led-indicator {
+      background: #F21A1D;
+      box-shadow: 0 0 15px rgba(242, 26, 29, 0.8), 0 0 30px rgba(242, 26, 29, 0.4);
+    }
+
+    /* Toggle label */
+    .toggle-label {
+      font-family: 'Handjet', sans-serif;
+      font-size: 12px;
+      font-weight: 400;
+      color: #ffffff;
+      text-shadow: 0px -7px 50px #BD0000;
+      letter-spacing: 1px;
+      margin-top: 8px;
+      text-align: center;
+      pointer-events: none;
+      max-width: 90px;
+    }
+
+    /* Advanced panel */
+    .advanced-panel {
+      position: absolute;
+      left: 760px;
+      top: 460px;
+      width: 130px;
+      height: 130px;
+      background: #666666;
+      border: 2px solid #333333;
+      border-radius: 4px;
+      padding: 10px;
+      z-index: 3;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .advanced-label {
+      font-family: 'Handjet', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      text-shadow: 0px -5px 30px #BD0000;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .advanced-control {
+      margin-bottom: 12px;
+    }
+
+    .advanced-control-label {
+      font-family: 'Handjet', sans-serif;
+      font-size: 11px;
+      color: #cccccc;
+      margin-bottom: 4px;
+    }
+
+    .advanced-slider {
+      width: 100%;
+      height: 4px;
+      background: #333333;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    .advanced-select {
+      width: 100%;
+      height: 24px;
+      background: #555555;
+      border: 1px solid #333333;
+      border-radius: 3px;
+      color: #ffffff;
+      font-family: 'Handjet', sans-serif;
+      font-size: 12px;
+      padding: 2px 4px;
+      cursor: pointer;
+    }
+
+    /* VU Meter */
+    .vu-meter {
+      position: absolute;
+      left: 835px;
+      top: 120px;
+      width: 50px;
+      height: 400px;
+      background: #222222;
+      border: 2px solid #000000;
+      border-radius: 4px;
+      padding: 5px;
+      z-index: 3;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+    .vu-bar {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      width: 40px;
+      height: 0%;
+      background: linear-gradient(to top, #00ff00 0%, #ffff00 50%, #ff0000 100%);
+      border-radius: 2px;
+      transition: height 50ms ease-out;
+      box-shadow: 0 0 10px rgba(189, 0, 0, 0.5);
+    }
+
+    /* Debug monitor (test HTML only) */
+    .debug-monitor {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 8px 12px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      min-width: 200px;
+      pointer-events: none;
+      z-index: 10000;
+    }
+
+    .debug-label {
+      color: #666;
+      font-size: 9px;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+
+    .debug-param {
+      font-weight: bold;
+      color: #0f0;
+    }
+
+    .debug-value {
+      color: #fff;
+      margin-top: 2px;
+    }
+
+    .debug-normalized {
+      color: #888;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-frame">
+    <!-- Main panel border -->
+    <div class="main-panel"></div>
+
+    <!-- Corner screws -->
+    <div class="screw" style="left: 25px; top: 25px;"></div>
+    <div class="screw" style="right: 25px; top: 25px;"></div>
+    <div class="screw" style="left: 25px; bottom: 25px;"></div>
+    <div class="screw" style="right: 25px; bottom: 25px;"></div>
+
+    <!-- Title -->
+    <div class="title">RED SHIFT</div>
+    <div class="subtitle">doppler effect delay</div>
+
+    <!-- CENTER: Primary doppler shift knob -->
+    <div class="knob-container" style="left: 310px; top: 175px;">
+      <div class="knob-label">DOPPLER SHIFT</div>
+      <div class="knob knob-primary" id="doppler_shift" data-min="-50" data-max="50" data-default="0" data-unit="%">
+        <div class="knob-circle"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-value" id="doppler_shift_value">0.0%</div>
+    </div>
+
+    <!-- TOP ARC: Feedback (12 o'clock) -->
+    <div class="knob-container" style="left: 370px; top: 40px;">
+      <div class="knob-label">FEEDBACK</div>
+      <div class="knob knob-standard" id="feedback" data-min="0" data-max="95" data-default="0" data-unit="%">
+        <div class="knob-circle"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-value" id="feedback_value">0%</div>
+    </div>
+
+    <!-- TOP RIGHT: Master Output (2 o'clock) -->
+    <div class="knob-container" style="left: 580px; top: 90px;">
+      <div class="knob-label">MASTER OUTPUT</div>
+      <div class="knob knob-standard" id="master_output" data-min="-60" data-max="12" data-default="0" data-unit="dB">
+        <div class="knob-circle"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-value" id="master_output_value">0.0dB</div>
+    </div>
+
+    <!-- TOP LEFT: Stereo Width (10 o'clock) -->
+    <div class="knob-container" style="left: 160px; top: 90px;">
+      <div class="knob-label">STEREO WIDTH</div>
+      <div class="knob knob-standard" id="stereo_width" data-min="-100" data-max="100" data-default="0" data-unit="%">
+        <div class="knob-circle"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-value" id="stereo_width_value">0%</div>
+    </div>
+
+    <!-- BOTTOM: Saturation (6 o'clock) -->
+    <div class="knob-container" style="left: 370px; top: 450px;">
+      <div class="knob-label">SATURATION</div>
+      <div class="knob knob-standard" id="saturation" data-min="-12" data-max="24" data-default="0" data-unit="dB">
+        <div class="knob-circle"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-value" id="saturation_value">0.0dB</div>
+    </div>
+
+    <!-- BOTTOM RIGHT: Hi-Cut Filter (4 o'clock) -->
+    <div class="knob-container" style="left: 580px; top: 400px;">
+      <div class="knob-label">HI-CUT</div>
+      <div class="knob knob-standard" id="filter_band_high" data-min="20" data-max="20000" data-default="8000" data-unit="Hz" data-scale="log">
+        <div class="knob-circle"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-value" id="filter_band_high_value">8.0kHz</div>
+    </div>
+
+    <!-- BOTTOM LEFT: Lo-Cut Filter (8 o'clock) -->
+    <div class="knob-container" style="left: 160px; top: 400px;">
+      <div class="knob-label">LO-CUT</div>
+      <div class="knob knob-standard" id="filter_band_low" data-min="20" data-max="20000" data-default="100" data-unit="Hz" data-scale="log">
+        <div class="knob-circle"></div>
+        <div class="knob-indicator"></div>
+      </div>
+      <div class="knob-value" id="filter_band_low_value">100Hz</div>
+    </div>
+
+    <!-- BYPASS TOGGLES (horizontal row) -->
+    <div class="toggle-container" style="left: 150px; top: 590px;">
+      <div class="toggle-button" id="bypass_stereo_width">
+        <div class="led-indicator"></div>
+      </div>
+      <div class="toggle-label">BYPASS<br>STEREO</div>
+    </div>
+
+    <div class="toggle-container" style="left: 270px; top: 590px;">
+      <div class="toggle-button" id="bypass_delay">
+        <div class="led-indicator"></div>
+      </div>
+      <div class="toggle-label">BYPASS<br>DELAY</div>
+    </div>
+
+    <div class="toggle-container" style="left: 490px; top: 590px;">
+      <div class="toggle-button" id="bypass_doppler">
+        <div class="led-indicator"></div>
+      </div>
+      <div class="toggle-label">BYPASS<br>DOPPLER</div>
+    </div>
+
+    <div class="toggle-container" style="left: 610px; top: 590px;">
+      <div class="toggle-button" id="bypass_saturation">
+        <div class="led-indicator"></div>
+      </div>
+      <div class="toggle-label">BYPASS<br>SAT</div>
+    </div>
+
+    <!-- Advanced Panel -->
+    <div class="advanced-panel">
+      <div class="advanced-label">ADVANCED</div>
+      <div class="advanced-control">
+        <div class="advanced-control-label">Grain Size (ms)</div>
+        <input type="range" class="advanced-slider" id="grain_size" min="25" max="200" value="100" />
+      </div>
+      <div class="advanced-control">
+        <div class="advanced-control-label">Grain Overlap</div>
+        <select class="advanced-select" id="grain_overlap">
+          <option value="0">2x</option>
+          <option value="1" selected>4x</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- VU Meter -->
+    <div class="vu-meter">
+      <div class="vu-bar" id="vu_bar"></div>
+    </div>
+  </div>
+
+  <!-- Debug monitor -->
+  <div class="debug-monitor">
+    <div class="debug-label">PARAMETER MONITOR</div>
+    <div class="debug-param" id="debugParam">—</div>
+    <div class="debug-value" id="debugValue">—</div>
+    <div class="debug-normalized" id="debugNormalized">—</div>
+  </div>
+
+  <script>
+    // Mock JUCE backend for browser testing
+    window.Juce = {
+      getSliderState: (id) => ({
+        normalisedValue: 0.5,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        },
+        setNormalisedValue: (v) => console.log(`${id} set to ${v}`)
+      }),
+      getToggleState: (id) => ({
+        value: false,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        },
+        setValue: (v) => console.log(`${id} toggled to ${v}`)
+      }),
+      getComboBoxState: (id) => ({
+        selectedId: 0,
+        valueChangedEvent: {
+          addListener: (fn) => console.log(`Listener added for ${id}`)
+        },
+        setSelectedId: (id) => console.log(`Combo changed to ${id}`)
+      })
+    };
+
+    // Disable context menu (REQUIRED)
+    document.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      return false;
+    });
+
+    // Update debug monitor
+    function updateDebugMonitor(paramId, value, normalizedValue) {
+      document.getElementById('debugParam').textContent = paramId;
+      document.getElementById('debugValue').textContent = value;
+      document.getElementById('debugNormalized').textContent = `${(normalizedValue * 100).toFixed(1)}%`;
+    }
+
+    // Format frequency for display
+    function formatFrequency(hz) {
+      if (hz >= 1000) {
+        return (hz / 1000).toFixed(1) + 'kHz';
+      }
+      return Math.round(hz) + 'Hz';
+    }
+
+    // Initialize knobs
+    document.addEventListener("DOMContentLoaded", () => {
+      const knobs = document.querySelectorAll('.knob');
+
+      knobs.forEach(knob => {
+        const id = knob.id;
+        const min = parseFloat(knob.dataset.min);
+        const max = parseFloat(knob.dataset.max);
+        const defaultVal = parseFloat(knob.dataset.default);
+        const unit = knob.dataset.unit || '';
+        const scale = knob.dataset.scale || 'linear';
+        const valueDisplay = document.getElementById(`${id}_value`);
+
+        let currentValue = defaultVal;
+        let isDragging = false;
+        let startY = 0;
+        let startValue = 0;
+
+        // Calculate rotation angle from value
+        function valueToRotation(value) {
+          let normalized;
+          if (scale === 'log') {
+            const logMin = Math.log(min);
+            const logMax = Math.log(max);
+            const logValue = Math.log(value);
+            normalized = (logValue - logMin) / (logMax - logMin);
+          } else {
+            normalized = (value - min) / (max - min);
+          }
+          return -135 + (normalized * 270); // -135° to +135° range
+        }
+
+        // Calculate value from rotation
+        function rotationToValue(rotation) {
+          const normalized = (rotation + 135) / 270;
+          const clampedNorm = Math.max(0, Math.min(1, normalized));
+
+          if (scale === 'log') {
+            const logMin = Math.log(min);
+            const logMax = Math.log(max);
+            return Math.exp(logMin + clampedNorm * (logMax - logMin));
+          } else {
+            return min + clampedNorm * (max - min);
+          }
+        }
+
+        // Update knob display
+        function updateKnob(value) {
+          currentValue = Math.max(min, Math.min(max, value));
+          const rotation = valueToRotation(currentValue);
+          knob.style.transform = `rotate(${rotation}deg)`;
+
+          // Format display value
+          let displayValue;
+          if (unit === 'Hz') {
+            displayValue = formatFrequency(currentValue);
+          } else if (unit === 'dB' || unit === '%') {
+            displayValue = currentValue.toFixed(1) + unit;
+          } else {
+            displayValue = currentValue.toFixed(0) + unit;
+          }
+          valueDisplay.textContent = displayValue;
+
+          // Update debug monitor
+          const normalized = scale === 'log'
+            ? (Math.log(currentValue) - Math.log(min)) / (Math.log(max) - Math.log(min))
+            : (currentValue - min) / (max - min);
+          updateDebugMonitor(id, displayValue, normalized);
+        }
+
+        // Mouse down - start drag
+        knob.addEventListener('mousedown', (e) => {
+          isDragging = true;
+          startY = e.clientY;
+          startValue = currentValue;
+          knob.style.cursor = 'grabbing';
+          e.preventDefault();
+        });
+
+        // Mouse move - update value
+        document.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+
+          const deltaY = startY - e.clientY;
+          const sensitivity = (max - min) / 200; // 200px = full range
+          const newValue = startValue + (deltaY * sensitivity);
+          updateKnob(newValue);
+        });
+
+        // Mouse up - end drag
+        document.addEventListener('mouseup', () => {
+          if (isDragging) {
+            isDragging = false;
+            knob.style.cursor = 'pointer';
+          }
+        });
+
+        // Initialize to default
+        updateKnob(defaultVal);
+      });
+
+      // Initialize toggle buttons
+      const toggles = document.querySelectorAll('.toggle-button');
+      toggles.forEach(toggle => {
+        const id = toggle.id;
+        let isActive = false;
+
+        toggle.addEventListener('click', () => {
+          isActive = !isActive;
+          toggle.classList.toggle('active', isActive);
+          updateDebugMonitor(id, isActive ? 'ON' : 'OFF', isActive ? 1 : 0);
+          console.log(`${id}: ${isActive}`);
+        });
+      });
+
+      // Initialize advanced controls
+      const grainSize = document.getElementById('grain_size');
+      const grainOverlap = document.getElementById('grain_overlap');
+
+      grainSize.addEventListener('input', (e) => {
+        const value = e.target.value;
+        updateDebugMonitor('grain_size', `${value}ms`, (value - 25) / 175);
+      });
+
+      grainOverlap.addEventListener('change', (e) => {
+        const value = e.target.selectedIndex === 0 ? '2x' : '4x';
+        updateDebugMonitor('grain_overlap', value, e.target.selectedIndex);
+      });
+
+      // Animate VU meter (mock audio signal)
+      const vuBar = document.getElementById('vu_bar');
+      let vuLevel = 0;
+      let vuDirection = 1;
+
+      setInterval(() => {
+        vuLevel += vuDirection * (Math.random() * 5);
+        if (vuLevel > 95) {
+          vuLevel = 95;
+          vuDirection = -1;
+        } else if (vuLevel < 0) {
+          vuLevel = 0;
+          vuDirection = 1;
+        }
+        vuBar.style.height = `${vuLevel}%`;
+      }, 50);
+    });
+  </script>
+</body>
+</html>
