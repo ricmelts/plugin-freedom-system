@@ -1,0 +1,60 @@
+# ==============================================================================
+# RedShiftDistortion - WebView UI Configuration (v6)
+# ==============================================================================
+#
+# APPEND THIS TO: plugins/RedShiftDistortion/CMakeLists.txt
+#
+# Integration steps:
+# 1. Copy v6-ui.html to Source/ui/public/index.html
+# 2. Copy JUCE frontend library to Source/ui/public/js/juce/
+# 3. Copy mockup assets to Source/ui/public/assets/
+# 4. Append this snippet to CMakeLists.txt
+# 5. Replace PluginEditor.h/.cpp with v6-PluginEditor-TEMPLATE files
+# 6. Build and test
+#
+# ==============================================================================
+
+# WebView UI Resources (bundled into plugin binary)
+juce_add_binary_data(RedShiftDistortion_UIResources
+    SOURCES
+        # Main UI
+        Source/ui/public/index.html
+
+        # JUCE WebView bridge (REQUIRED)
+        Source/ui/public/js/juce/index.js
+        Source/ui/public/js/juce/check_native_interop.js
+
+        # Visual assets (v6 mockup)
+        Source/ui/public/assets/00fa754f6e134fb61f5e452b7ba8415e529dd82a.png  # Diamond plate texture
+        Source/ui/public/assets/4287f6bace032d3fb347fc04a01722012ff802a1.png  # Red screws
+        Source/ui/public/assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png  # Knob image
+)
+
+# Link UI resources to plugin
+target_link_libraries(RedShiftDistortion
+    PRIVATE
+        RedShiftDistortion_UIResources  # UI assets
+        juce::juce_gui_extra            # Required for WebBrowserComponent
+)
+
+# Enable WebView
+target_compile_definitions(RedShiftDistortion
+    PUBLIC
+        JUCE_WEB_BROWSER=1   # Enable WebBrowserComponent
+        JUCE_USE_CURL=0      # Disable CURL (not needed for local HTML)
+)
+
+# ==============================================================================
+# CRITICAL: Update juce_add_plugin() with NEEDS_WEB_BROWSER flag
+# ==============================================================================
+#
+# Modify existing juce_add_plugin() call to include:
+#
+# juce_add_plugin(RedShiftDistortion
+#     ...existing parameters...
+#     NEEDS_WEB_BROWSER TRUE  # REQUIRED for VST3 WebView support
+# )
+#
+# Without this flag, VST3 builds successfully but won't appear in DAW scanner.
+#
+# ==============================================================================
