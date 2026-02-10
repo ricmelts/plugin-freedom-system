@@ -1,282 +1,622 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RedShiftDistortion</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedShiftDistortion</title>
 
-        html, body {
-            width: 100%;
-            height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            color: #fff;
-            overflow: hidden;
-        }
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Handjet:wght@300;400&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Jacquard+12&display=swap');
 
-        .container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            padding: 20px;
-            gap: 15px;
-        }
+    /* CRITICAL: WebView constraints - NO viewport units */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
 
-        .header {
-            text-align: center;
-            padding: 10px 0;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-        }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
 
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+    body {
+      /* Native application feel (REQUIRED) */
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: default;
+      overflow: hidden;
 
-        .section {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 15px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
+      /* Plugin container fills entire WebView */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+    }
 
-        .section h2 {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: #667eea;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+    /* Plugin container - fixed 950x700px */
+    .container {
+      width: 950px;
+      height: 700px;
+      position: relative;
+      background-image: url('assets/00fa754f6e134fb61f5e452b7ba8415e529dd82a.png');
+      background-size: cover;
+      background-position: center;
+    }
 
-        .param-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-        }
+    /* Corner screws */
+    .screw {
+      position: absolute;
+      width: 38px;
+      height: 38px;
+      pointer-events: none;
+    }
 
-        .param {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
+    /* Title */
+    .title {
+      position: absolute;
+      left: 50%;
+      top: 40px;
+      transform: translateX(-50%);
+      font-family: 'Jacquard 12', sans-serif;
+      font-size: 78px;
+      color: #000000;
+      text-shadow: -2px 2px 2px #bd0000, 0px 2px 50px #bd0000;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
 
-        .param label {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.7);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-        }
+    /* Subtitle */
+    .subtitle {
+      position: absolute;
+      left: 50%;
+      top: 660px;
+      transform: translateX(-50%);
+      font-family: 'Handjet', sans-serif;
+      font-size: 30px;
+      font-weight: 300;
+      color: #000000;
+      text-shadow: 0px -7px 50px #bd0000;
+      text-align: center;
+    }
 
-        .param input[type="range"] {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            outline: none;
-            -webkit-appearance: none;
-            cursor: pointer;
-        }
+    /* v10: HISE filmstrip knob for main doppler control - SCALED UP 2.1x */
+    .main-knob-container {
+      position: absolute;
+      left: 345px;
+      top: 250px;
+      width: 176px;
+      height: 176px;
+    }
 
-        .param input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        }
+    /* Red glow layers behind main knob - scaled up 2.1x */
+    .main-knob-glow-outer {
+      position: absolute;
+      width: 315px;
+      height: 315px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 26, 29, 0.8) 0%, rgba(189, 0, 0, 0.6) 40%, transparent 70%);
+      filter: blur(42px);
+    }
 
-        .param input[type="range"]::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        }
+    .main-knob-glow-inner {
+      position: absolute;
+      width: 231px;
+      height: 231px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 26, 29, 0.9) 0%, transparent 70%);
+      filter: blur(31px);
+    }
 
-        .param .value {
-            font-size: 13px;
-            color: #fff;
-            font-weight: 600;
-            min-height: 20px;
-        }
+    /* v10: HISE filmstrip knob (black gear knob) */
+    .main-knob {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      /* NO rotation - filmstrip uses background-position instead */
+      background-image: url('assets/hise_knob_big.png');
+      background-repeat: no-repeat;
+      background-size: 176px auto; /* Width fixed to 176px (2.1x scale from 84px) */
+      background-position: 0 0; /* Will be updated via JS based on value */
+      /* NO transition - filmstrip frames should update instantly */
+    }
 
-        .bypass-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 12px;
-        }
+    /* Sub knobs - 65px diameter - v10: HISE filmstrip */
+    .sub-knob-container {
+      position: absolute;
+      width: 65px;
+      height: 65px;
+    }
 
-        .bypass-btn {
-            padding: 10px 16px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
-            color: rgba(255, 255, 255, 0.8);
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.2s ease;
-        }
+    /* Red glow layers behind sub knobs */
+    .sub-knob-glow-outer {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 26, 29, 0.7) 0%, rgba(189, 0, 0, 0.5) 40%, transparent 70%);
+      filter: blur(15px);
+    }
 
-        .bypass-btn:hover {
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(255, 255, 255, 0.25);
-        }
+    .sub-knob-glow-inner {
+      position: absolute;
+      width: 75px;
+      height: 75px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 26, 29, 0.8) 0%, transparent 70%);
+      filter: blur(10px);
+    }
 
-        .bypass-btn.active {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-            border-color: #ff6b6b;
-            color: #fff;
-        }
+    .sub-knob {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      /* v10: HISE filmstrip rendering */
+      background-image: url('assets/hise_knob_small.png');
+      background-repeat: no-repeat;
+      background-size: 65px auto; /* Width fixed to 65px (scaled down from 130px) */
+      background-position: 0 0; /* Will be updated via JS based on value */
+      /* NO transition - filmstrip frames update instantly */
+    }
 
-        .advanced-section {
-            margin-top: auto;
-        }
-    </style>
+    /* Sub knob labels (static, do not rotate) */
+    .sub-knob-label {
+      position: absolute;
+      font-family: 'Handjet', sans-serif;
+      font-size: 26px;
+      font-weight: 400;
+      color: #000000;
+      text-shadow: 0px -7px 50px #bd0000;
+      text-align: center;
+      white-space: nowrap;
+      pointer-events: none;
+      text-transform: uppercase;
+      transform: translateX(-50%); /* Center on X coordinate */
+    }
+
+    /* Bypass buttons */
+    .bypass-container {
+      position: absolute;
+      width: 29px;
+      height: 29px;
+    }
+
+    .bypass-button {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #D9D9D9 0%, #888986 100%);
+      border: 3px solid rgba(242, 26, 29, 0.5);
+      cursor: pointer;
+      transition: all 100ms;
+    }
+
+    .bypass-button:hover {
+      border-color: rgba(242, 26, 29, 0.8);
+    }
+
+    .bypass-button.active {
+      background: linear-gradient(180deg, #F21A1D 0%, #bd0000 100%);
+      border-color: #F21A1D;
+    }
+
+    .bypass-led {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(242, 26, 29, 0.3);
+      border: 2px solid #000;
+    }
+
+    .bypass-button.active .bypass-led {
+      background: #F21A1D;
+      box-shadow: 0 0 10px #F21A1D;
+    }
+
+    /* Bypass labels */
+    .bypass-label {
+      position: absolute;
+      left: 60px;
+      font-family: 'Handjet', sans-serif;
+      font-size: 18px;
+      color: #000000;
+      text-shadow: 0px -5px 30px #bd0000;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Advanced settings */
+    .advanced-slider {
+      position: absolute;
+      width: 90px;
+      height: 23px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #000;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .advanced-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 19px;
+      background: linear-gradient(180deg, #D9D9D9 0%, #888986 100%);
+      border: 1px solid #000;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    .advanced-dropdown {
+      position: absolute;
+      width: 90px;
+      height: 26px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #000;
+      border-radius: 3px;
+      color: #fff;
+      font-family: 'Handjet', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 2px 5px;
+    }
+
+    /* Advanced labels */
+    .advanced-label {
+      position: absolute;
+      right: 255px;
+      font-family: 'Handjet', sans-serif;
+      font-size: 16px;
+      color: #000000;
+      text-shadow: 0px -5px 30px #bd0000;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* VU Meter - DUAL STEREO (L + R) */
+    .vu-meter-container {
+      position: absolute;
+      left: 820px;
+      top: 175px;
+      width: 90px;
+      height: 350px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .vu-meter {
+      width: 40px;
+      height: 350px;
+      background: #1a0a00;
+      border: 2px solid #000;
+      border-radius: 5px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .vu-meter-label {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Handjet', sans-serif;
+      font-size: 18px;
+      color: #000000;
+      text-shadow: 0px -5px 30px #bd0000;
+      font-weight: bold;
+    }
+
+    .vu-meter-fill {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 0%;
+      background: #F21A1D;
+      transition: height 50ms;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>RedShiftDistortion</h1>
-        </div>
+  <div class="container">
+    <!-- Corner screws -->
+    <img src="assets/4287f6bace032d3fb347fc04a01722012ff802a1.png" class="screw" style="left: 20px; top: 20px;" />
+    <img src="assets/4287f6bace032d3fb347fc04a01722012ff802a1.png" class="screw" style="left: 20px; top: 642px;" />
+    <img src="assets/4287f6bace032d3fb347fc04a01722012ff802a1.png" class="screw" style="left: 892px; top: 20px;" />
+    <img src="assets/4287f6bace032d3fb347fc04a01722012ff802a1.png" class="screw" style="left: 892px; top: 642px;" />
 
-        <div class="section">
-            <h2>Main Controls</h2>
-            <div class="param-grid" id="mainControls"></div>
-        </div>
+    <!-- Title -->
+    <div class="title">RED SHIFT</div>
 
-        <div class="section">
-            <h2>Bypass Controls</h2>
-            <div class="bypass-grid" id="bypassControls"></div>
-        </div>
+    <!-- Subtitle -->
+    <div class="subtitle">digital delay</div>
 
-        <div class="section advanced-section">
-            <h2>Advanced Settings</h2>
-            <div class="param-grid" id="advancedControls"></div>
-        </div>
+    <!-- v10: HISE filmstrip doppler shift knob (176px, 128 frames) -->
+    <div class="main-knob-container">
+      <div class="main-knob-glow-outer"></div>
+      <div class="main-knob-glow-inner"></div>
+      <div class="main-knob" id="dopplerKnob" data-param="DOPPLER_SHIFT"></div>
     </div>
 
-    <script type="module" src="js/juce/index.js"></script>
-    <script type="module">
-        import { getSliderState, getToggleState } from './js/juce/index.js';
+    <!-- Sub knobs (6 surrounding knobs) - 65px diameter, v10: HISE filmstrip with red glows -->
 
-        // Main controls (7 sliders)
-        const mainParams = [
-            { id: 'STEREO_WIDTH', label: 'Stereo Width', unit: '%', format: (v) => v.toFixed(1) },
-            { id: 'FEEDBACK', label: 'Feedback', unit: '%', format: (v) => v.toFixed(1) },
-            { id: 'FILTER_BAND_LOW', label: 'Lo-Cut', unit: 'Hz', format: (v) => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v.toFixed(0) },
-            { id: 'FILTER_BAND_HIGH', label: 'Hi-Cut', unit: 'Hz', format: (v) => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v.toFixed(0) },
-            { id: 'DOPPLER_SHIFT', label: 'Doppler Shift', unit: '%', format: (v) => v.toFixed(1) },
-            { id: 'SATURATION', label: 'Saturation', unit: 'dB', format: (v) => v.toFixed(1) },
-            { id: 'MASTER_OUTPUT', label: 'Master Output', unit: 'dB', format: (v) => v.toFixed(1) }
-        ];
+    <!-- Stereo Width (top-left, 10 o'clock) -->
+    <div class="sub-knob-container" style="left: 173px; top: 147px;">
+      <div class="sub-knob-glow-outer"></div>
+      <div class="sub-knob-glow-inner"></div>
+      <div class="sub-knob" id="stereoWidthKnob" data-param="STEREO_WIDTH"></div>
+    </div>
+    <div class="sub-knob-label" style="left: 205.5px; top: 220px;">stereo width</div>
 
-        // Bypass controls (4 toggles)
-        const bypassParams = [
-            { id: 'BYPASS_STEREO_WIDTH', label: 'Bypass Stereo Width' },
-            { id: 'BYPASS_DELAY', label: 'Bypass Delay' },
-            { id: 'BYPASS_DOPPLER', label: 'Bypass Doppler' },
-            { id: 'BYPASS_SATURATION', label: 'Bypass Saturation' }
-        ];
+    <!-- Feedback (top-center, 12 o'clock) -->
+    <div class="sub-knob-container" style="left: 410px; top: 123px;">
+      <div class="sub-knob-glow-outer"></div>
+      <div class="sub-knob-glow-inner"></div>
+      <div class="sub-knob" id="feedbackKnob" data-param="FEEDBACK"></div>
+    </div>
+    <div class="sub-knob-label" style="left: 442.5px; top: 196px;">feedback</div>
 
-        // Advanced controls (2 sliders)
-        const advancedParams = [
-            { id: 'GRAIN_SIZE', label: 'Grain Size', unit: 'ms', format: (v) => v.toFixed(0) },
-            { id: 'GRAIN_OVERLAP', label: 'Grain Overlap', unit: '', format: (v) => v === 0 ? '2x' : '4x' }
-        ];
+    <!-- Master Output (top-right, 2 o'clock) -->
+    <div class="sub-knob-container" style="left: 647px; top: 147px;">
+      <div class="sub-knob-glow-outer"></div>
+      <div class="sub-knob-glow-inner"></div>
+      <div class="sub-knob" id="masterOutputKnob" data-param="MASTER_OUTPUT"></div>
+    </div>
+    <div class="sub-knob-label" style="left: 679.5px; top: 220px;">master</div>
 
-        // Create slider UI elements
-        function createSliderParam(param, container) {
-            const state = getSliderState(param.id);
-            const div = document.createElement('div');
-            div.className = 'param';
-            div.innerHTML = `
-                <label>${param.label}</label>
-                <input type="range" min="0" max="1" step="0.001" value="${state.getNormalisedValue()}">
-                <div class="value"></div>
-            `;
-            container.appendChild(div);
+    <!-- Lo-Cut Filter (bottom-left, 8 o'clock) -->
+    <div class="sub-knob-container" style="left: 173px; top: 438px;">
+      <div class="sub-knob-glow-outer"></div>
+      <div class="sub-knob-glow-inner"></div>
+      <div class="sub-knob" id="loCutKnob" data-param="FILTER_BAND_LOW"></div>
+    </div>
+    <div class="sub-knob-label" style="left: 205.5px; top: 511px;">lo-cut</div>
 
-            const slider = div.querySelector('input');
-            const valueDisplay = div.querySelector('.value');
+    <!-- Saturation (bottom-center, 6 o'clock) -->
+    <div class="sub-knob-container" style="left: 410px; top: 462px;">
+      <div class="sub-knob-glow-outer"></div>
+      <div class="sub-knob-glow-inner"></div>
+      <div class="sub-knob" id="saturationKnob" data-param="SATURATION"></div>
+    </div>
+    <div class="sub-knob-label" style="left: 442.5px; top: 535px;">saturation</div>
 
-            const updateDisplay = () => {
-                const value = state.getValue();
-                const formatted = param.format ? param.format(value) : value.toFixed(2);
-                valueDisplay.textContent = `${formatted} ${param.unit}`;
-            };
+    <!-- Hi-Cut Filter (bottom-right, 4 o'clock) -->
+    <div class="sub-knob-container" style="left: 647px; top: 438px;">
+      <div class="sub-knob-glow-outer"></div>
+      <div class="sub-knob-glow-inner"></div>
+      <div class="sub-knob" id="hiCutKnob" data-param="FILTER_BAND_HIGH"></div>
+    </div>
+    <div class="sub-knob-label" style="left: 679.5px; top: 511px;">hi-cut</div>
 
-            slider.addEventListener('input', (e) => {
-                state.setNormalisedValue(parseFloat(e.target.value));
-            });
+    <!-- Bypass buttons (left side vertical stack) -->
+    <div class="bypass-container" style="left: 25px; top: 230px;">
+      <div class="bypass-button" id="bypassDoppler" data-param="BYPASS_DOPPLER">
+        <div class="bypass-led"></div>
+      </div>
+    </div>
+    <div class="bypass-label" style="top: 234px;">Doppler</div>
 
-            state.valueChangedEvent.addListener(() => {
-                slider.value = state.getNormalisedValue();
-                updateDisplay();
-            });
+    <div class="bypass-container" style="left: 25px; top: 285px;">
+      <div class="bypass-button" id="bypassSaturation" data-param="BYPASS_SATURATION">
+        <div class="bypass-led"></div>
+      </div>
+    </div>
+    <div class="bypass-label" style="top: 289px;">Saturation</div>
 
-            updateDisplay();
-        }
+    <div class="bypass-container" style="left: 25px; top: 340px;">
+      <div class="bypass-button" id="bypassFilters" data-param="BYPASS_STEREO_WIDTH">
+        <div class="bypass-led"></div>
+      </div>
+    </div>
+    <div class="bypass-label" style="top: 344px;">Filters</div>
 
-        // Create toggle button elements
-        function createToggleParam(param, container) {
-            const state = getToggleState(param.id);
-            const button = document.createElement('button');
-            button.className = 'bypass-btn';
-            button.textContent = param.label;
-            container.appendChild(button);
+    <div class="bypass-container" style="left: 25px; top: 395px;">
+      <div class="bypass-button" id="bypassFeedback" data-param="BYPASS_DELAY">
+        <div class="bypass-led"></div>
+      </div>
+    </div>
+    <div class="bypass-label" style="top: 399px;">Feedback</div>
 
-            const updateButton = () => {
-                const value = state.getValue();
-                button.classList.toggle('active', value);
-            };
+    <!-- Advanced settings (bottom-right) -->
+    <div class="advanced-label" style="top: 633px;">Grain Size</div>
+    <input type="range" id="grainSize" class="advanced-slider" style="left: 765px; top: 630px;" min="25" max="200" value="50" data-param="GRAIN_SIZE" />
 
-            button.addEventListener('click', () => {
-                state.setValue(!state.getValue());
-            });
+    <div class="advanced-label" style="top: 668px;">Grain Overlap</div>
+    <select id="grainOverlap" class="advanced-dropdown" style="left: 765px; top: 665px;" data-param="GRAIN_OVERLAP">
+      <option value="0">2x</option>
+      <option value="1" selected>4x</option>
+    </select>
 
-            state.valueChangedEvent.addListener(() => {
-                updateButton();
-            });
+    <!-- DUAL VU METERS (L + R) - Solid RED only -->
+    <div class="vu-meter-container">
+      <div class="vu-meter">
+        <div class="vu-meter-label">L</div>
+        <div class="vu-meter-fill" id="vuMeterFillL"></div>
+      </div>
+      <div class="vu-meter">
+        <div class="vu-meter-label">R</div>
+        <div class="vu-meter-fill" id="vuMeterFillR"></div>
+      </div>
+    </div>
+  </div>
 
-            updateButton();
-        }
+  <!-- JUCE WebView integration -->
+  <script type="module" src="js/juce/index.js"></script>
+  <script type="module">
+    import { getSliderState, getToggleState, getComboBoxState } from './js/juce/index.js';
 
-        // Initialize all parameters
-        const mainContainer = document.getElementById('mainControls');
-        mainParams.forEach(param => createSliderParam(param, mainContainer));
+    // Disable context menu (REQUIRED for native feel)
+    document.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      return false;
+    });
 
-        const bypassContainer = document.getElementById('bypassControls');
-        bypassParams.forEach(param => createToggleParam(param, bypassContainer));
+    // Disable default drag behaviors
+    document.addEventListener("dragstart", (e) => {
+      e.preventDefault();
+    });
 
-        const advancedContainer = document.getElementById('advancedControls');
-        advancedParams.forEach(param => createSliderParam(param, advancedContainer));
+    // v10: HISE filmstrip knob handler - uses background-position instead of rotation
+    function setupHISEFilmstripKnob(element, paramId, frameHeight) {
+      const sliderState = getSliderState(paramId);
+      if (!sliderState) {
+        console.error(\`Failed to get slider state for \${paramId}\`);
+        return;
+      }
 
-        console.log('RedShiftDistortion UI initialized - 13 parameters bound');
-    </script>
+      const FRAME_COUNT = 128;
+      const FRAME_HEIGHT = frameHeight;
+
+      let isDragging = false;
+      let lastY = 0;
+
+      function updateFilmstrip() {
+        const normalized = sliderState.getNormalisedValue();
+        // Map normalized value (0-1) to frame index (0-127)
+        const frameIndex = Math.floor(normalized * (FRAME_COUNT - 1));
+        // Calculate Y position (negative because filmstrip frames go downward)
+        const yPosition = -(frameIndex * FRAME_HEIGHT);
+        element.style.backgroundPositionY = \`\${yPosition}px\`;
+      }
+
+      element.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        lastY = e.clientY;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaY = lastY - e.clientY;
+        const sensitivity = 1.0 / 200.0;
+        const currentValue = sliderState.getNormalisedValue();
+        const newValue = Math.max(0, Math.min(1, currentValue + (deltaY * sensitivity)));
+        sliderState.setNormalisedValue(newValue);
+        lastY = e.clientY;
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      sliderState.valueChangedEvent.addListener(() => {
+        updateFilmstrip();
+      });
+
+      updateFilmstrip();
+    }
+
+    // Setup main HISE filmstrip knob (doppler shift) - 176px, frame height 176px
+    setupHISEFilmstripKnob(document.getElementById('dopplerKnob'), 'DOPPLER_SHIFT', 176);
+
+    // Setup all sub knobs as HISE filmstrips - 65px, frame height 65px
+    setupHISEFilmstripKnob(document.getElementById('stereoWidthKnob'), 'STEREO_WIDTH', 65);
+    setupHISEFilmstripKnob(document.getElementById('feedbackKnob'), 'FEEDBACK', 65);
+    setupHISEFilmstripKnob(document.getElementById('masterOutputKnob'), 'MASTER_OUTPUT', 65);
+    setupHISEFilmstripKnob(document.getElementById('loCutKnob'), 'FILTER_BAND_LOW', 65);
+    setupHISEFilmstripKnob(document.getElementById('saturationKnob'), 'SATURATION', 65);
+    setupHISEFilmstripKnob(document.getElementById('hiCutKnob'), 'FILTER_BAND_HIGH', 65);
+
+    // Setup bypass buttons
+    function setupBypassButton(element, paramId) {
+      const toggleState = getToggleState(paramId);
+      if (!toggleState) {
+        console.error(\`Failed to get toggle state for \${paramId}\`);
+        return;
+      }
+
+      function updateVisual() {
+        const active = toggleState.getValue();
+        element.classList.toggle('active', active);
+      }
+
+      element.addEventListener('click', () => {
+        const currentValue = toggleState.getValue();
+        toggleState.setValue(!currentValue);
+      });
+
+      toggleState.valueChangedEvent.addListener(() => {
+        updateVisual();
+      });
+
+      updateVisual();
+    }
+
+    setupBypassButton(document.getElementById('bypassDoppler'), 'BYPASS_DOPPLER');
+    setupBypassButton(document.getElementById('bypassSaturation'), 'BYPASS_SATURATION');
+    setupBypassButton(document.getElementById('bypassFilters'), 'BYPASS_STEREO_WIDTH');
+    setupBypassButton(document.getElementById('bypassFeedback'), 'BYPASS_DELAY');
+
+    // Setup grain size slider
+    const grainSizeSlider = document.getElementById('grainSize');
+    const grainSizeState = getSliderState('GRAIN_SIZE');
+    if (grainSizeState) {
+      grainSizeSlider.addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        const normalized = (value - 25) / (200 - 25);
+        grainSizeState.setNormalisedValue(normalized);
+      });
+
+      grainSizeState.valueChangedEvent.addListener(() => {
+        const normalized = grainSizeState.getNormalisedValue();
+        const value = 25 + (normalized * (200 - 25));
+        grainSizeSlider.value = value;
+      });
+    }
+
+    // Setup grain overlap dropdown
+    const grainOverlapDropdown = document.getElementById('grainOverlap');
+    const grainOverlapState = getComboBoxState('GRAIN_OVERLAP');
+    if (grainOverlapState) {
+      grainOverlapDropdown.addEventListener('change', (e) => {
+        const selectedIndex = parseInt(e.target.value);
+        grainOverlapState.setSelectedId(selectedIndex);
+      });
+
+      grainOverlapState.valueChangedEvent.addListener(() => {
+        const selectedId = grainOverlapState.getSelectedId();
+        grainOverlapDropdown.value = selectedId;
+      });
+    }
+
+    // Animate DUAL VU meters (mock audio levels for L + R)
+    function animateVUMeters() {
+      const vuMeterFillL = document.getElementById('vuMeterFillL');
+      const vuMeterFillR = document.getElementById('vuMeterFillR');
+
+      const levelL = Math.random() * 80 + 20;
+      const levelR = Math.random() * 80 + 20;
+
+      vuMeterFillL.style.height = \`\${levelL}%\`;
+      vuMeterFillR.style.height = \`\${levelR}%\`;
+
+      requestAnimationFrame(animateVUMeters);
+    }
+
+    animateVUMeters();
+
+    console.log('RedShiftDistortion UI v10 loaded - Production mode with HISE filmstrip knobs');
+  </script>
 </body>
 </html>
