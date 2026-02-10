@@ -490,6 +490,7 @@
         const currentValue = sliderState.getNormalisedValue();
         const newValue = Math.max(0, Math.min(1, currentValue + (deltaY * sensitivity)));
         sliderState.setNormalisedValue(newValue);
+        updateFilmstrip();  // Immediate visual feedback during drag
         lastY = e.clientY;
       });
 
@@ -531,6 +532,7 @@
       element.addEventListener('click', () => {
         const currentValue = toggleState.getValue();
         toggleState.setValue(!currentValue);
+        updateVisual();  // Immediate visual feedback on click
       });
 
       toggleState.valueChangedEvent.addListener(() => {
