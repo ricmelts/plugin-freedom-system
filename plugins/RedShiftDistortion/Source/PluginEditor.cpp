@@ -19,12 +19,8 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     loCutFilterRelay = std::make_unique<juce::WebSliderRelay>("FILTER_BAND_LOW");
     saturationRelay = std::make_unique<juce::WebSliderRelay>("SATURATION");
     hiCutFilterRelay = std::make_unique<juce::WebSliderRelay>("FILTER_BAND_HIGH");
-    grainSizeRelay = std::make_unique<juce::WebSliderRelay>("GRAIN_SIZE");
     bypassDopplerRelay = std::make_unique<juce::WebToggleButtonRelay>("BYPASS_DOPPLER");
     bypassSaturationRelay = std::make_unique<juce::WebToggleButtonRelay>("BYPASS_SATURATION");
-    bypassStereoWidthRelay = std::make_unique<juce::WebToggleButtonRelay>("BYPASS_STEREO_WIDTH");
-    bypassDelayRelay = std::make_unique<juce::WebToggleButtonRelay>("BYPASS_DELAY");
-    grainOverlapRelay = std::make_unique<juce::WebComboBoxRelay>("GRAIN_OVERLAP");
 
     // 2️⃣ CREATE WEBVIEW with relay options
     webView = std::make_unique<juce::WebBrowserComponent>(
@@ -38,12 +34,8 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
             .withOptionsFrom(*loCutFilterRelay)
             .withOptionsFrom(*saturationRelay)
             .withOptionsFrom(*hiCutFilterRelay)
-            .withOptionsFrom(*grainSizeRelay)
             .withOptionsFrom(*bypassDopplerRelay)
             .withOptionsFrom(*bypassSaturationRelay)
-            .withOptionsFrom(*bypassStereoWidthRelay)
-            .withOptionsFrom(*bypassDelayRelay)
-            .withOptionsFrom(*grainOverlapRelay)
     );
 
     // 3️⃣ CREATE ATTACHMENTS (JUCE 8 requires 3 parameters: parameter, relay, undoManager)
@@ -61,18 +53,10 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
         *audioProcessor.parameters.getParameter("SATURATION"), *saturationRelay, nullptr);
     hiCutFilterAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *audioProcessor.parameters.getParameter("FILTER_BAND_HIGH"), *hiCutFilterRelay, nullptr);
-    grainSizeAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *audioProcessor.parameters.getParameter("GRAIN_SIZE"), *grainSizeRelay, nullptr);
     bypassDopplerAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
         *audioProcessor.parameters.getParameter("BYPASS_DOPPLER"), *bypassDopplerRelay, nullptr);
     bypassSaturationAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
         *audioProcessor.parameters.getParameter("BYPASS_SATURATION"), *bypassSaturationRelay, nullptr);
-    bypassStereoWidthAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
-        *audioProcessor.parameters.getParameter("BYPASS_STEREO_WIDTH"), *bypassStereoWidthRelay, nullptr);
-    bypassDelayAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
-        *audioProcessor.parameters.getParameter("BYPASS_DELAY"), *bypassDelayRelay, nullptr);
-    grainOverlapAttachment = std::make_unique<juce::WebComboBoxParameterAttachment>(
-        *audioProcessor.parameters.getParameter("GRAIN_OVERLAP"), *grainOverlapRelay, nullptr);
 
     // Add WebView to component and navigate to root
     addAndMakeVisible(*webView);

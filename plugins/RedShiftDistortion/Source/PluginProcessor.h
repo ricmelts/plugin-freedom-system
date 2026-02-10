@@ -37,14 +37,25 @@ private:
     // Parameter layout creation
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    // DSP Components (Phase 2.1: Stereo Width + Basic Delay)
+    // DSP Components (Full signal chain implementation)
 
-    // Stage 1: Stereo Width Modulation
+    // Stage 1: Stereo Width Modulation (psychoacoustic shift)
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoWidthDelayLeft;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoWidthDelayRight;
 
-    // Stage 2: Tape Delay (basic pass-through for Phase 2.1, feedback added in Phase 2.3)
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelay;
+    // Stage 2: Tape Delay with Feedback
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelayLeft;
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelayRight;
+
+    // Feedback history (per channel)
+    float feedbackHistoryLeft = 0.0f;
+    float feedbackHistoryRight = 0.0f;
+
+    // Stage 3: Filters (in feedback path)
+    juce::dsp::IIR::Filter<float> hiCutFilterLeft;
+    juce::dsp::IIR::Filter<float> hiCutFilterRight;
+    juce::dsp::IIR::Filter<float> loCutFilterLeft;
+    juce::dsp::IIR::Filter<float> loCutFilterRight;
 
     // Stereo width smoothing (exponential smoothing, 10ms time constant)
     float smoothedStereoControl = 0.0f;
@@ -52,7 +63,7 @@ private:
 
     // Constants (from architecture.md)
     static constexpr float ITD_HALF_MS = 260.0f;  // Maximum L/R differential (ms)
-    static constexpr float MAX_DELAY_MS = 300.0f;  // Maximum tape delay (ms)
+    static constexpr float MAX_DELAY_MS = 16000.0f;  // Maximum tape delay (ms) - matches STEREO_WIDTH param
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RedShiftDistortionAudioProcessor)
 };

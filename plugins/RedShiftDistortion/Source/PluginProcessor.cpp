@@ -72,53 +72,20 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         "dB"
     ));
 
-    // BYPASS CONTROLS (4 BoolParameters)
+    // BYPASS CONTROLS (2 BoolParameters)
 
-    // 8. BYPASS_STEREO_WIDTH - Bypass Stereo Width (default: false)
-    layout.add(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID { "BYPASS_STEREO_WIDTH", 1 },
-        "Bypass Stereo Width",
-        false
-    ));
-
-    // 9. BYPASS_DELAY - Bypass Delay (default: false)
-    layout.add(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID { "BYPASS_DELAY", 1 },
-        "Bypass Delay",
-        false
-    ));
-
-    // 10. BYPASS_DOPPLER - Bypass Doppler (default: false)
+    // 8. BYPASS_DOPPLER - Bypass Doppler (default: false)
     layout.add(std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID { "BYPASS_DOPPLER", 1 },
         "Bypass Doppler",
         false
     ));
 
-    // 11. BYPASS_SATURATION - Bypass Saturation (default: false)
+    // 9. BYPASS_SATURATION - Bypass Saturation (default: false)
     layout.add(std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID { "BYPASS_SATURATION", 1 },
         "Bypass Saturation",
         false
-    ));
-
-    // ADVANCED SETTINGS (2 parameters)
-
-    // 12. GRAIN_SIZE - Grain Size (25ms to 200ms, default: 100ms)
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "GRAIN_SIZE", 1 },
-        "Grain Size",
-        juce::NormalisableRange<float>(25.0f, 200.0f, 1.0f),
-        100.0f,
-        "ms"
-    ));
-
-    // 13. GRAIN_OVERLAP - Grain Overlap (2x or 4x, default: 4x = index 1)
-    layout.add(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID { "GRAIN_OVERLAP", 1 },
-        "Grain Overlap",
-        juce::StringArray { "2x", "4x" },
-        1  // Default: 4x (index 1)
     ));
 
     return layout;
@@ -142,7 +109,7 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
-    spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
+    spec.numChannels = 1;  // Mono per-channel processing
 
     // Calculate stereo width smoothing coefficient (10ms time constant)
     const float smoothingTimeMs = 10.0f;
@@ -152,7 +119,7 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     const int maxStereoWidthDelaySamples = static_cast<int>(std::ceil((ITD_HALF_MS / 1000.0f) * sampleRate));
     const int maxTapeDelaySamples = static_cast<int>(std::ceil((MAX_DELAY_MS / 1000.0f) * sampleRate));
 
-    // Initialize stereo width delay lines (Stage 1)
+    // Initialize stereo width delay lines (Stage 1: Psychoacoustic Shift)
     stereoWidthDelayLeft.prepare(spec);
     stereoWidthDelayLeft.setMaximumDelayInSamples(maxStereoWidthDelaySamples);
     stereoWidthDelayLeft.reset();
@@ -161,13 +128,30 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     stereoWidthDelayRight.setMaximumDelayInSamples(maxStereoWidthDelaySamples);
     stereoWidthDelayRight.reset();
 
-    // Initialize tape delay line (Stage 2)
-    tapeDelay.prepare(spec);
-    tapeDelay.setMaximumDelayInSamples(maxTapeDelaySamples);
-    tapeDelay.reset();
+    // Initialize tape delay lines (Stage 2: Delay with Feedback)
+    tapeDelayLeft.prepare(spec);
+    tapeDelayLeft.setMaximumDelayInSamples(maxTapeDelaySamples);
+    tapeDelayLeft.reset();
 
-    // Reset smoothed control
+    tapeDelayRight.prepare(spec);
+    tapeDelayRight.setMaximumDelayInSamples(maxTapeDelaySamples);
+    tapeDelayRight.reset();
+
+    // Initialize filters (Stage 3: Hi-Cut and Lo-Cut in feedback path)
+    hiCutFilterLeft.prepare(spec);
+    hiCutFilterLeft.reset();
+    hiCutFilterRight.prepare(spec);
+    hiCutFilterRight.reset();
+
+    loCutFilterLeft.prepare(spec);
+    loCutFilterLeft.reset();
+    loCutFilterRight.prepare(spec);
+    loCutFilterRight.reset();
+
+    // Reset state variables
     smoothedStereoControl = 0.0f;
+    feedbackHistoryLeft = 0.0f;
+    feedbackHistoryRight = 0.0f;
 }
 
 void RedShiftDistortionAudioProcessor::releaseResources()
@@ -188,71 +172,120 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
         return;
 
     // Read parameters (atomic, real-time safe)
-    const float stereoWidthParam = parameters.getRawParameterValue("STEREO_WIDTH")->load();
-    const bool bypassStereoWidth = parameters.getRawParameterValue("BYPASS_STEREO_WIDTH")->load() > 0.5f;
-    const bool bypassDelay = parameters.getRawParameterValue("BYPASS_DELAY")->load() > 0.5f;
+    const float delayTimeMs = parameters.getRawParameterValue("STEREO_WIDTH")->load();  // UI: "DELAY"
+    const float dopplerShiftPercent = parameters.getRawParameterValue("DOPPLER_SHIFT")->load();  // UI: "SHIFT"
+    const float feedbackAmount = parameters.getRawParameterValue("FEEDBACK")->load() / 100.0f;  // 0-95% → 0.0-0.95
+    const float saturationDb = parameters.getRawParameterValue("SATURATION")->load();
+    const float filterLowHz = parameters.getRawParameterValue("FILTER_BAND_LOW")->load();  // Lo-cut (highpass)
+    const float filterHighHz = parameters.getRawParameterValue("FILTER_BAND_HIGH")->load();  // Hi-cut (lowpass)
     const float masterOutputDb = parameters.getRawParameterValue("MASTER_OUTPUT")->load();
+    const bool bypassDoppler = parameters.getRawParameterValue("BYPASS_DOPPLER")->load() > 0.5f;
+    const bool bypassSaturation = parameters.getRawParameterValue("BYPASS_SATURATION")->load() > 0.5f;
 
-    // Calculate target stereo control (-1.0 to +1.0)
-    const float targetStereoControl = bypassStereoWidth ? 0.0f : (stereoWidthParam / 100.0f);
+    // Calculate target doppler control (-1.0 to +1.0) for psychoacoustic "shift" effect
+    const float targetDopplerControl = bypassDoppler ? 0.0f : (dopplerShiftPercent / 100.0f);
 
-    // Calculate master output gain (dB to linear)
+    // Calculate gains
+    const float saturationGain = bypassSaturation ? 1.0f : std::pow(10.0f, saturationDb / 20.0f);
     const float masterGain = std::pow(10.0f, masterOutputDb / 20.0f);
 
     // Get sample rate for delay time calculations
     const float sampleRate = static_cast<float>(getSampleRate());
 
+    // Calculate delay times in samples
+    const float delayTimeSamples = (delayTimeMs / 1000.0f) * sampleRate;
+
+    // Update filter coefficients (do once per block for efficiency)
+    auto loCutCoeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, filterLowHz);
+    auto hiCutCoeffs = juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, filterHighHz);
+
+    *loCutFilterLeft.coefficients = *loCutCoeffs;
+    *loCutFilterRight.coefficients = *loCutCoeffs;
+    *hiCutFilterLeft.coefficients = *hiCutCoeffs;
+    *hiCutFilterRight.coefficients = *hiCutCoeffs;
+
     // Process each sample
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        // Smooth stereo control (exponential smoothing, 10ms time constant)
-        smoothedStereoControl += (targetStereoControl - smoothedStereoControl) * stereoSmoothingCoeff;
+        // Smooth doppler control (exponential smoothing, 10ms time constant)
+        smoothedStereoControl += (targetDopplerControl - smoothedStereoControl) * stereoSmoothingCoeff;
 
-        // Calculate L/R delay times (ITD_HALF = 260ms maximum)
-        const float stereoDelayTimeSamples = (ITD_HALF_MS / 1000.0f) * sampleRate * smoothedStereoControl;
-        const float leftDelaySamples = stereoDelayTimeSamples;   // Positive offset
-        const float rightDelaySamples = -stereoDelayTimeSamples;  // Negative offset (opposite)
+        // Calculate L/R ITD offsets for psychoacoustic shift (ITD_HALF = 260ms maximum)
+        const float itdDelayTimeSamples = (ITD_HALF_MS / 1000.0f) * sampleRate * smoothedStereoControl;
+        const float leftITDSamples = itdDelayTimeSamples;    // Positive offset
+        const float rightITDSamples = -itdDelayTimeSamples;  // Negative offset (opposite)
 
-        // STAGE 1: Stereo Width Modulation
-        for (int ch = 0; ch < numChannels; ++ch)
+        // Process left and right channels independently
+        for (int ch = 0; ch < std::min(numChannels, 2); ++ch)
         {
             float* channelData = buffer.getWritePointer(ch);
             const float input = channelData[sample];
 
+            // STAGE 1: Psychoacoustic Shift (ITD-based delay for spatial effect)
+            float shiftOutput = input;
             if (ch == 0)  // Left channel
             {
                 stereoWidthDelayLeft.pushSample(0, input);
-                stereoWidthDelayLeft.setDelay(std::abs(leftDelaySamples));
-                channelData[sample] = stereoWidthDelayLeft.popSample(0);
+                stereoWidthDelayLeft.setDelay(std::abs(leftITDSamples));
+                shiftOutput = stereoWidthDelayLeft.popSample(0);
             }
             else if (ch == 1)  // Right channel
             {
                 stereoWidthDelayRight.pushSample(0, input);
-                stereoWidthDelayRight.setDelay(std::abs(rightDelaySamples));
-                channelData[sample] = stereoWidthDelayRight.popSample(0);
+                stereoWidthDelayRight.setDelay(std::abs(rightITDSamples));
+                shiftOutput = stereoWidthDelayRight.popSample(0);
             }
-        }
 
-        // STAGE 2: Tape Delay (basic pass-through for Phase 2.1, no feedback yet)
-        if (!bypassDelay)
-        {
-            for (int ch = 0; ch < numChannels; ++ch)
+            // STAGE 2: Tape Delay with Feedback Loop
+            // Add feedback from previous iteration (filtered)
+            float& feedbackHistory = (ch == 0) ? feedbackHistoryLeft : feedbackHistoryRight;
+            const float delayInput = shiftOutput + (feedbackHistory * feedbackAmount);
+
+            // Push to delay line
+            if (ch == 0)
             {
-                float* channelData = buffer.getWritePointer(ch);
-                const float stereoWidthOutput = channelData[sample];
-
-                // Push to delay line, pop immediately (0ms delay = pass-through)
-                tapeDelay.pushSample(ch, stereoWidthOutput);
-                tapeDelay.setDelay(0.0f);  // No delay yet (Phase 2.3 will add feedback)
-                channelData[sample] = tapeDelay.popSample(ch);
+                tapeDelayLeft.pushSample(0, delayInput);
+                tapeDelayLeft.setDelay(delayTimeSamples);
             }
-        }
+            else
+            {
+                tapeDelayRight.pushSample(0, delayInput);
+                tapeDelayRight.setDelay(delayTimeSamples);
+            }
 
-        // STAGE 5: Master Output Gain
-        for (int ch = 0; ch < numChannels; ++ch)
-        {
-            float* channelData = buffer.getWritePointer(ch);
-            channelData[sample] *= masterGain;
+            // Get delayed signal
+            const float delayOutput = (ch == 0) ? tapeDelayLeft.popSample(0) : tapeDelayRight.popSample(0);
+
+            // STAGE 3: Saturation (soft clipping with gain)
+            float saturatedSignal = delayOutput * saturationGain;
+            if (!bypassSaturation)
+            {
+                // Soft clip using tanh for smooth saturation
+                saturatedSignal = std::tanh(saturatedSignal);
+            }
+
+            // STAGE 4: Feedback Path Filtering (lo-cut + hi-cut)
+            float filteredFeedback = saturatedSignal;
+            if (ch == 0)
+            {
+                filteredFeedback = loCutFilterLeft.processSample(filteredFeedback);
+                filteredFeedback = hiCutFilterLeft.processSample(filteredFeedback);
+            }
+            else
+            {
+                filteredFeedback = loCutFilterRight.processSample(filteredFeedback);
+                filteredFeedback = hiCutFilterRight.processSample(filteredFeedback);
+            }
+
+            // Store for next iteration
+            feedbackHistory = filteredFeedback;
+
+            // STAGE 5: Mix dry and wet, apply master output gain
+            const float wetSignal = saturatedSignal;
+            const float drySignal = input;
+            const float mixedSignal = wetSignal;  // 100% wet for now (could add dry/wet mix later)
+
+            channelData[sample] = mixedSignal * masterGain;
         }
     }
 }

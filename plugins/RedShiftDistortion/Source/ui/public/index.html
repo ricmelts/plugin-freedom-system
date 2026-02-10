@@ -352,30 +352,31 @@
     <!-- Subtitle -->
     <div class="subtitle">digital delay</div>
 
-    <!-- v10: HISE filmstrip doppler shift knob (176px, 128 frames) -->
+    <!-- v10: HISE filmstrip main shift knob (176px, 128 frames) -->
     <div class="main-knob-container">
       <div class="main-knob-glow-outer"></div>
       <div class="main-knob-glow-inner"></div>
       <div class="main-knob" id="dopplerKnob" data-param="DOPPLER_SHIFT"></div>
     </div>
+    <div class="sub-knob-label" style="left: 442.5px; top: 435px;">SHIFT</div>
 
     <!-- Sub knobs (6 surrounding knobs) - 65px diameter, v10: HISE filmstrip with red glows -->
 
-    <!-- Stereo Width (top-left, 10 o'clock) -->
+    <!-- Delay (top-left, 10 o'clock) -->
     <div class="sub-knob-container" style="left: 173px; top: 147px;">
       <div class="sub-knob-glow-outer"></div>
       <div class="sub-knob-glow-inner"></div>
       <div class="sub-knob" id="stereoWidthKnob" data-param="STEREO_WIDTH"></div>
     </div>
-    <div class="sub-knob-label" style="left: 205.5px; top: 220px;">stereo width</div>
+    <div class="sub-knob-label" style="left: 205.5px; top: 220px;">DELAY</div>
 
-    <!-- Feedback (top-center, 12 o'clock) -->
+    <!-- Saturation (top-center, 12 o'clock) -->
     <div class="sub-knob-container" style="left: 410px; top: 123px;">
       <div class="sub-knob-glow-outer"></div>
       <div class="sub-knob-glow-inner"></div>
-      <div class="sub-knob" id="feedbackKnob" data-param="FEEDBACK"></div>
+      <div class="sub-knob" id="feedbackKnob" data-param="SATURATION"></div>
     </div>
-    <div class="sub-knob-label" style="left: 442.5px; top: 196px;">feedback</div>
+    <div class="sub-knob-label" style="left: 442.5px; top: 196px;">SATURATION</div>
 
     <!-- Master Output (top-right, 2 o'clock) -->
     <div class="sub-knob-container" style="left: 647px; top: 147px;">
@@ -393,29 +394,29 @@
     </div>
     <div class="sub-knob-label" style="left: 205.5px; top: 511px;">lo-cut</div>
 
-    <!-- Saturation (bottom-center, 6 o'clock) -->
+    <!-- Hi-Cut Filter (bottom-center, 6 o'clock) -->
     <div class="sub-knob-container" style="left: 410px; top: 462px;">
       <div class="sub-knob-glow-outer"></div>
       <div class="sub-knob-glow-inner"></div>
-      <div class="sub-knob" id="saturationKnob" data-param="SATURATION"></div>
+      <div class="sub-knob" id="saturationKnob" data-param="FILTER_BAND_HIGH"></div>
     </div>
-    <div class="sub-knob-label" style="left: 442.5px; top: 535px;">saturation</div>
+    <div class="sub-knob-label" style="left: 442.5px; top: 535px;">HI-CUT</div>
 
-    <!-- Hi-Cut Filter (bottom-right, 4 o'clock) -->
+    <!-- Feedback (bottom-right, 4 o'clock) -->
     <div class="sub-knob-container" style="left: 647px; top: 438px;">
       <div class="sub-knob-glow-outer"></div>
       <div class="sub-knob-glow-inner"></div>
-      <div class="sub-knob" id="hiCutKnob" data-param="FILTER_BAND_HIGH"></div>
+      <div class="sub-knob" id="hiCutKnob" data-param="FEEDBACK"></div>
     </div>
-    <div class="sub-knob-label" style="left: 679.5px; top: 511px;">hi-cut</div>
+    <div class="sub-knob-label" style="left: 679.5px; top: 511px;">FEEDBACK</div>
 
-    <!-- Bypass buttons (left side vertical stack) -->
+    <!-- Bypass buttons (left side vertical stack) - Only 2 buttons -->
     <div class="bypass-container" style="left: 25px; top: 230px;">
       <div class="bypass-button" id="bypassDoppler" data-param="BYPASS_DOPPLER">
         <div class="bypass-led"></div>
       </div>
     </div>
-    <div class="bypass-label" style="top: 234px;">Doppler</div>
+    <div class="bypass-label" style="top: 234px;">Shift</div>
 
     <div class="bypass-container" style="left: 25px; top: 285px;">
       <div class="bypass-button" id="bypassSaturation" data-param="BYPASS_SATURATION">
@@ -423,30 +424,6 @@
       </div>
     </div>
     <div class="bypass-label" style="top: 289px;">Saturation</div>
-
-    <div class="bypass-container" style="left: 25px; top: 340px;">
-      <div class="bypass-button" id="bypassFilters" data-param="BYPASS_STEREO_WIDTH">
-        <div class="bypass-led"></div>
-      </div>
-    </div>
-    <div class="bypass-label" style="top: 344px;">Filters</div>
-
-    <div class="bypass-container" style="left: 25px; top: 395px;">
-      <div class="bypass-button" id="bypassFeedback" data-param="BYPASS_DELAY">
-        <div class="bypass-led"></div>
-      </div>
-    </div>
-    <div class="bypass-label" style="top: 399px;">Feedback</div>
-
-    <!-- Advanced settings (bottom-right) -->
-    <div class="advanced-label" style="top: 633px;">Grain Size</div>
-    <input type="range" id="grainSize" class="advanced-slider" style="left: 765px; top: 630px;" min="25" max="200" value="50" data-param="GRAIN_SIZE" />
-
-    <div class="advanced-label" style="top: 668px;">Grain Overlap</div>
-    <select id="grainOverlap" class="advanced-dropdown" style="left: 765px; top: 665px;" data-param="GRAIN_OVERLAP">
-      <option value="0">2x</option>
-      <option value="1" selected>4x</option>
-    </select>
 
     <!-- DUAL VU METERS (L + R) - Solid RED only -->
     <div class="vu-meter-container">
@@ -532,11 +509,11 @@
 
     // Setup all sub knobs as HISE filmstrips - 65px, frame height 65px
     setupHISEFilmstripKnob(document.getElementById('stereoWidthKnob'), 'STEREO_WIDTH', 65);
-    setupHISEFilmstripKnob(document.getElementById('feedbackKnob'), 'FEEDBACK', 65);
+    setupHISEFilmstripKnob(document.getElementById('feedbackKnob'), 'SATURATION', 65);
     setupHISEFilmstripKnob(document.getElementById('masterOutputKnob'), 'MASTER_OUTPUT', 65);
     setupHISEFilmstripKnob(document.getElementById('loCutKnob'), 'FILTER_BAND_LOW', 65);
-    setupHISEFilmstripKnob(document.getElementById('saturationKnob'), 'SATURATION', 65);
-    setupHISEFilmstripKnob(document.getElementById('hiCutKnob'), 'FILTER_BAND_HIGH', 65);
+    setupHISEFilmstripKnob(document.getElementById('saturationKnob'), 'FILTER_BAND_HIGH', 65);
+    setupHISEFilmstripKnob(document.getElementById('hiCutKnob'), 'FEEDBACK', 65);
 
     // Setup bypass buttons
     function setupBypassButton(element, paramId) {
@@ -565,40 +542,6 @@
 
     setupBypassButton(document.getElementById('bypassDoppler'), 'BYPASS_DOPPLER');
     setupBypassButton(document.getElementById('bypassSaturation'), 'BYPASS_SATURATION');
-    setupBypassButton(document.getElementById('bypassFilters'), 'BYPASS_STEREO_WIDTH');
-    setupBypassButton(document.getElementById('bypassFeedback'), 'BYPASS_DELAY');
-
-    // Setup grain size slider
-    const grainSizeSlider = document.getElementById('grainSize');
-    const grainSizeState = getSliderState('GRAIN_SIZE');
-    if (grainSizeState) {
-      grainSizeSlider.addEventListener('input', (e) => {
-        const value = parseFloat(e.target.value);
-        const normalized = (value - 25) / (200 - 25);
-        grainSizeState.setNormalisedValue(normalized);
-      });
-
-      grainSizeState.valueChangedEvent.addListener(() => {
-        const normalized = grainSizeState.getNormalisedValue();
-        const value = 25 + (normalized * (200 - 25));
-        grainSizeSlider.value = value;
-      });
-    }
-
-    // Setup grain overlap dropdown
-    const grainOverlapDropdown = document.getElementById('grainOverlap');
-    const grainOverlapState = getComboBoxState('GRAIN_OVERLAP');
-    if (grainOverlapState) {
-      grainOverlapDropdown.addEventListener('change', (e) => {
-        const selectedIndex = parseInt(e.target.value);
-        grainOverlapState.setSelectedId(selectedIndex);
-      });
-
-      grainOverlapState.valueChangedEvent.addListener(() => {
-        const selectedId = grainOverlapState.getSelectedId();
-        grainOverlapDropdown.value = selectedId;
-      });
-    }
 
     // Animate DUAL VU meters (mock audio levels for L + R)
     function animateVUMeters() {
