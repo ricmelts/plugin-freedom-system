@@ -43,64 +43,12 @@ private:
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoWidthDelayLeft;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoWidthDelayRight;
 
-    // Stage 2: Tape Delay (with feedback loop - Phase 2.3)
+    // Stage 2: Tape Delay (basic pass-through for Phase 2.1, feedback added in Phase 2.3)
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelay;
-
-    // Feedback buffer (stores filtered feedback signal for next iteration)
-    juce::AudioBuffer<float> feedbackBuffer;
 
     // Stereo width smoothing (exponential smoothing, 10ms time constant)
     float smoothedStereoControl = 0.0f;
     float stereoSmoothingCoeff = 0.0f;  // Calculated in prepareToPlay
-
-    // Filter parameter smoothing (Phase 2.5 - prevents clicks on filter changes)
-    float smoothedFilterLow = 100.0f;
-    float smoothedFilterHigh = 8000.0f;
-    float filterSmoothingCoeff = 0.0f;  // Calculated in prepareToPlay
-
-    // Previous filter values for conditional updates (Phase 2.5 - optimization)
-    float prevFilterLow = -1.0f;
-    float prevFilterHigh = -1.0f;
-
-    // Feedback filters (Stage 2 - feedback path, Phase 2.4)
-    using IIRFilter = juce::dsp::IIR::Filter<float>;
-
-    IIRFilter feedbackLoCutFilterLeft;   // Highpass (removes low frequencies)
-    IIRFilter feedbackLoCutFilterRight;
-    IIRFilter feedbackHiCutFilterLeft;   // Lowpass (removes high frequencies)
-    IIRFilter feedbackHiCutFilterRight;
-
-    // Stage 3: Granular Pitch Shifter (Phase 2.2 - isolated testing)
-    struct GrainEngine
-    {
-        static constexpr int MAX_GRAIN_SIZE_SAMPLES = 9600;  // 200ms at 48kHz
-        static constexpr int MAX_GRAINS = 4;  // 4x overlap maximum
-
-        // Grain buffer (circular buffer for grain playback)
-        std::array<float, MAX_GRAIN_SIZE_SAMPLES> grainBuffer;
-        int grainBufferWritePos = 0;
-
-        // Hann window lookup table (pre-calculated in prepareToPlay)
-        std::array<float, MAX_GRAIN_SIZE_SAMPLES> hannWindow;
-
-        // Active grains (each grain has independent playback position)
-        struct Grain
-        {
-            float readPosition = 0.0f;  // Fractional sample position
-            int grainPhase = 0;         // Current phase (0 to grainSize-1)
-            bool active = false;
-        };
-        std::array<Grain, MAX_GRAINS> grains;
-
-        // Grain spawning
-        int samplesUntilNextGrain = 0;
-        int grainAdvanceSamples = 0;  // Calculated from grainSize / grainOverlap
-    };
-
-    std::array<GrainEngine, 2> grainEngines;  // Separate engine per channel
-
-    // Granular parameters (cached from APVTS)
-    float currentSampleRate = 48000.0f;
 
     // Constants (from architecture.md)
     static constexpr float ITD_HALF_MS = 260.0f;  // Maximum L/R differential (ms)
