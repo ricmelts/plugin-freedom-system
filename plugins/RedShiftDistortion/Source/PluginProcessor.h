@@ -38,6 +38,14 @@ public:
     // APVTS for parameter management
     juce::AudioProcessorValueTreeState parameters;
 
+    // Level metering for UI
+    std::atomic<float> outputLevelL{ 0.0f };
+    std::atomic<float> outputLevelR{ 0.0f };
+
+    float getOutputLevel(int channel) const {
+        return channel == 0 ? outputLevelL.load() : outputLevelR.load();
+    }
+
 private:
     // Parameter layout creation
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

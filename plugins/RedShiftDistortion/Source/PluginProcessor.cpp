@@ -71,7 +71,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
         "dB"
     ));
 
-    // Bypass Controls (4 bool parameters)
+    // Bypass Controls (6 bool parameters)
 
     // bypassStereoWidth - Bypass stereo width modulation (mono output)
     layout.add(std::make_unique<juce::AudioParameterBool>(
@@ -98,6 +98,20 @@ juce::AudioProcessorValueTreeState::ParameterLayout RedShiftDistortionAudioProce
     layout.add(std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID { "bypassSaturation", 1 },
         "Bypass Saturation",
+        false
+    ));
+
+    // bypassFilters - Bypass hi-cut and lo-cut filters
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID { "bypassFilters", 1 },
+        "Bypass Filters",
+        false
+    ));
+
+    // bypassFeedback - Bypass feedback loop
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID { "bypassFeedback", 1 },
+        "Bypass Feedback",
         false
     ));
 
@@ -261,6 +275,8 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     auto* filterBandLowParam = parameters.getRawParameterValue("filterBandLow");
     auto* filterBandHighParam = parameters.getRawParameterValue("filterBandHigh");
     auto* bypassSaturationParam = parameters.getRawParameterValue("bypassSaturation");
+    auto* bypassFiltersParam = parameters.getRawParameterValue("bypassFilters");
+    auto* bypassFeedbackParam = parameters.getRawParameterValue("bypassFeedback");
 
     // Phase 2.3: Read granular doppler shift parameters
     auto* dopplerShiftParam = parameters.getRawParameterValue("dopplerShift");
@@ -279,6 +295,8 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     float filterBandLow = filterBandLowParam->load();
     float filterBandHigh = filterBandHighParam->load();
     bool bypassSaturation = bypassSaturationParam->load() > 0.5f;
+    bool bypassFilters = bypassFiltersParam->load() > 0.5f;
+    bool bypassFeedback = bypassFeedbackParam->load() > 0.5f;
 
     // Phase 2.3: Load granular doppler shift parameter values
     float dopplerShift = dopplerShiftParam->load();  // -50% to +50%
@@ -525,32 +543,78 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
                 dopplerShiftedR = grainOutputR / static_cast<float>(numOverlappingGrains);
         }
 
-        // 6. Apply saturation to doppler-shifted signal (if not bypassed)
+        // 6. Apply tube saturation to doppler-shifted signal (if not bypassed)
         float saturatedL = dopplerShiftedL;
         float saturatedR = dopplerShiftedR;
 
         if (!bypassSaturation)
         {
-            // Apply gain, then tanh waveshaping
-            saturatedL = std::tanh(saturationGain * dopplerShiftedL);
-            saturatedR = std::tanh(saturationGain * dopplerShiftedR);
+            // Enhanced tube distortion model with asymmetrical clipping
+            // Mimics triode tube transfer characteristics:
+            // - Asymmetrical clipping (positive clips harder than negative)
+            // - Even-order harmonics (2nd, 4th) for warmth
+            // - Odd-order harmonics (3rd, 5th) for grit
+
+            auto tubeSaturation = [](float input, float gain) -> float {
+                // Apply input gain
+                float driven = input * gain;
+
+                // Asymmetry coefficient (positive clipping is harder than negative)
+                const float asymmetry = 0.15f;  // Tube-like asymmetry
+
+                // Split positive and negative processing
+                if (driven > 0.0f)
+                {
+                    // Positive half: Harder clipping (triode grid saturation)
+                    // tanh with slight boost creates more aggressive even harmonics
+                    float positiveDrive = driven * (1.0f + asymmetry);
+                    float saturated = std::tanh(positiveDrive);
+
+                    // Add subtle second-order harmonic (warmth)
+                    float secondHarmonic = driven * driven * 0.1f;
+                    return saturated + secondHarmonic * (1.0f - saturated);
+                }
+                else
+                {
+                    // Negative half: Softer clipping (cathode follower characteristic)
+                    float negativeDrive = driven * (1.0f - asymmetry);
+                    float saturated = std::tanh(negativeDrive);
+
+                    // Negative side has less harmonic content (cleaner)
+                    return saturated * 0.95f;  // Slight attenuation for asymmetry
+                }
+            };
+
+            saturatedL = tubeSaturation(dopplerShiftedL, saturationGain);
+            saturatedR = tubeSaturation(dopplerShiftedR, saturationGain);
         }
 
-        // 7. Apply dual-band filtering (hi-pass → lo-pass)
+        // 7. Apply dual-band filtering (hi-pass → lo-pass) if not bypassed
         float filteredL = saturatedL;
         float filteredR = saturatedR;
 
-        // Hi-pass filter (lo-cut)
-        filteredL = hiPassFilterL.processSample(filteredL);
-        filteredR = hiPassFilterR.processSample(filteredR);
+        if (!bypassFilters)
+        {
+            // Hi-pass filter (lo-cut)
+            filteredL = hiPassFilterL.processSample(filteredL);
+            filteredR = hiPassFilterR.processSample(filteredR);
 
-        // Lo-pass filter (hi-cut)
-        filteredL = loPassFilterL.processSample(filteredL);
-        filteredR = loPassFilterR.processSample(filteredR);
+            // Lo-pass filter (hi-cut)
+            filteredL = loPassFilterL.processSample(filteredL);
+            filteredR = loPassFilterR.processSample(filteredR);
+        }
 
-        // 8. Scale by feedback gain and store for next iteration
-        feedbackStateL = filteredL * feedbackValue;
-        feedbackStateR = filteredR * feedbackValue;
+        // 8. Scale by feedback gain and store for next iteration (if feedback not bypassed)
+        if (!bypassFeedback)
+        {
+            feedbackStateL = filteredL * feedbackValue;
+            feedbackStateR = filteredR * feedbackValue;
+        }
+        else
+        {
+            feedbackStateL = 0.0f;
+            feedbackStateR = 0.0f;
+        }
 
         // === FEEDBACK LOOP END ===
 
@@ -558,6 +622,17 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
         leftChannel[sample] = delayedL;
         rightChannel[sample] = delayedR;
     }
+
+    // Calculate output levels for VU meters (before master gain)
+    float maxLevelL = 0.0f;
+    float maxLevelR = 0.0f;
+    for (int sample = 0; sample < numSamples; ++sample)
+    {
+        maxLevelL = std::max(maxLevelL, std::abs(leftChannel[sample]));
+        maxLevelR = std::max(maxLevelR, std::abs(rightChannel[sample]));
+    }
+    outputLevelL.store(maxLevelL);
+    outputLevelR.store(maxLevelR);
 
     // Apply master output gain
     float masterGain = std::pow(10.0f, masterOutputDB / 20.0f);

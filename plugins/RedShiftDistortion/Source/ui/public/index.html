@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RedShiftDistortion</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Handjet:wght@300;400&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Jacquard+12&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: default;
+    }
+
+    body {
+      background: #2a2a2a;
+      font-family: 'Handjet', sans-serif;
+    }
+
+    .container {
+      width: 950px;
+      height: 700px;
+      position: relative;
+      background: #444;
+    }
+
+    /* Title */
+    .title {
+      position: absolute;
+      left: 50%;
+      top: 40px;
+      transform: translateX(-50%);
+      font-family: 'Jacquard 12', sans-serif;
+      font-size: 78px;
+      color: #000000;
+      text-shadow: -2px 2px 2px #bd0000, 0px 2px 50px #bd0000;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+
+    /* Main knob container - centered */
+    .main-knob-container {
+      position: absolute;
+      left: 387px;
+      top: 266px;
+      width: 176px;
+      height: 176px;
+    }
+
+    /* Red glow layers */
+    .main-knob-glow-outer {
+      position: absolute;
+      width: 315px;
+      height: 315px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 26, 29, 0.8) 0%, rgba(189, 0, 0, 0.6) 40%, transparent 70%);
+      filter: blur(42px);
+      pointer-events: none;
+    }
+
+    .main-knob-glow-inner {
+      position: absolute;
+      width: 231px;
+      height: 231px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 26, 29, 0.9) 0%, transparent 70%);
+      filter: blur(31px);
+      pointer-events: none;
+    }
+
+    /* Main knob - simple CSS circle for now (will use filmstrip later) */
+    .main-knob {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #666 0%, #333 50%, #111 100%);
+      border: 4px solid #000;
+      cursor: pointer;
+      box-shadow: inset 0 4px 8px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    /* Knob indicator line */
+    .main-knob::after {
+      content: '';
+      position: absolute;
+      width: 4px;
+      height: 60px;
+      background: #F21A1D;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 2px;
+      box-shadow: 0 0 8px #F21A1D;
+    }
+
+    /* Main knob label */
+    .main-knob-label {
+      position: absolute;
+      left: 475px;
+      top: 450px;
+      font-family: 'Handjet', sans-serif;
+      font-size: 30px;
+      color: #000000;
+      text-shadow: 0px -7px 50px #bd0000;
+      text-align: center;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Value display */
+    .value-display {
+      position: absolute;
+      left: 475px;
+      top: 480px;
+      font-family: 'Handjet', sans-serif;
+      font-size: 24px;
+      color: #F21A1D;
+      text-align: center;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Title -->
+    <div class="title">RED SHIFT</div>
+
+    <!-- Main doppler shift knob -->
+    <div class="main-knob-container">
+      <div class="main-knob-glow-outer"></div>
+      <div class="main-knob-glow-inner"></div>
+      <div class="main-knob" id="dopplerKnob"></div>
+    </div>
+
+    <!-- Label and value display -->
+    <div class="main-knob-label">doppler effect delay</div>
+    <div class="value-display" id="valueDisplay">0.0%</div>
+  </div>
+
+  <script src="js/juce/check_native_interop.js"></script>
+  <script src="js/juce/index.js"></script>
+  <script>
+    // Wait for JUCE backend to be ready
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('RedShiftDistortion UI loaded');
+
+      // Check if running in JUCE
+      if (typeof window.__JUCE__ !== 'undefined') {
+        console.log('JUCE backend detected');
+        initializeUI();
+      } else {
+        console.log('Running in browser (mock mode)');
+        initializeMockUI();
+      }
+    });
+
+    function initializeUI() {
+      const knob = document.getElementById('dopplerKnob');
+      const valueDisplay = document.getElementById('valueDisplay');
+
+      // Get parameter state from JUCE
+      const dopplerParam = window.__JUCE__.backend.getSliderValue('dopplerShift');
+
+      // Track drag state
+      let isDragging = false;
+      let startY = 0;
+      let startValue = dopplerParam || 0;
+
+      // Update visual rotation based on value
+      function updateKnob(value) {
+        const normalized = (value + 50) / 100; // -50 to +50 → 0 to 1
+        const degrees = -135 + (normalized * 270); // -135° to +135°
+        knob.style.transform = `rotate(${degrees}deg)`;
+        valueDisplay.textContent = `${value.toFixed(1)}%`;
+      }
+
+      // Initial update
+      updateKnob(startValue);
+
+      // Mouse drag handler
+      knob.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        startValue = dopplerParam || 0;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const delta = startY - e.clientY;
+        const sensitivity = 100 / 200; // 100 range over 200 pixels
+        let newValue = startValue + (delta * sensitivity);
+        newValue = Math.max(-50, Math.min(50, newValue)); // Clamp to range
+
+        updateKnob(newValue);
+
+        // Send to JUCE backend
+        if (window.__JUCE__ && window.__JUCE__.backend) {
+          window.__JUCE__.backend.setSliderValue('dopplerShift', newValue);
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+        }
+      });
+
+      // Listen for parameter changes from JUCE (automation, preset loading, etc.)
+      if (window.__JUCE__ && window.__JUCE__.backend && window.__JUCE__.backend.addEventListener) {
+        window.__JUCE__.backend.addEventListener('dopplerShift', (value) => {
+          updateKnob(value);
+        });
+      }
+    }
+
+    // Mock UI for browser testing
+    function initializeMockUI() {
+      const knob = document.getElementById('dopplerKnob');
+      const valueDisplay = document.getElementById('valueDisplay');
+
+      let isDragging = false;
+      let startY = 0;
+      let currentValue = 0;
+
+      function updateKnob(value) {
+        const normalized = (value + 50) / 100;
+        const degrees = -135 + (normalized * 270);
+        knob.style.transform = `rotate(${degrees}deg)`;
+        valueDisplay.textContent = `${value.toFixed(1)}%`;
+        currentValue = value;
+      }
+
+      knob.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const delta = startY - e.clientY;
+        const sensitivity = 100 / 200;
+        let newValue = currentValue + (delta * sensitivity);
+        newValue = Math.max(-50, Math.min(50, newValue));
+
+        updateKnob(newValue);
+        startY = e.clientY;
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      updateKnob(0);
+    }
+
+    // Prevent context menu
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+  </script>
+</body>
+</html>

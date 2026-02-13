@@ -48,28 +48,26 @@ target_link_libraries(RedShiftDistortion
 # Generate JuceHeader.h (JUCE 8 requirement - MUST come after target_link_libraries)
 juce_generate_juce_header(RedShiftDistortion)
 
-# WebView UI Resources (uncommented by gui-agent if WebView UI used)
-# juce_add_binary_data(RedShiftDistortion_UIResources
-#     SOURCES
-#         Source/ui/public/index.html
-#         Source/ui/public/js/juce/index.js
-#         Source/ui/public/js/juce/check_native_interop.js
-# )
-#
-# target_link_libraries(RedShiftDistortion
-#     PRIVATE
-#         RedShiftDistortion_UIResources
-# )
+# UI Asset Resources (images + fonts for native JUCE rendering)
+juce_add_binary_data(RedShiftDistortion_UIResources
+    SOURCES
+        .ideas/mockups/assets/00fa754f6e134fb61f5e452b7ba8415e529dd82a.png
+        .ideas/mockups/assets/4287f6bace032d3fb347fc04a01722012ff802a1.png
+        .ideas/mockups/assets/hise_knob_big.png
+        .ideas/mockups/assets/hise_Knob_medium.png
+        Source/ui/fonts/Jacquard12-Regular.ttf
+        Source/ui/fonts/Handjet-Static.ttf
+)
+
+target_link_libraries(RedShiftDistortion
+    PRIVATE
+        RedShiftDistortion_UIResources
+)
 
 # Compile definitions
 target_compile_definitions(RedShiftDistortion
     PUBLIC
         JUCE_VST3_CAN_REPLACE_VST2=0
+        JUCE_WEB_BROWSER=1
+        JUCE_USE_CURL=0
 )
-
-# WebView support (uncommented by gui-agent if WebView UI used)
-# target_compile_definitions(RedShiftDistortion
-#     PUBLIC
-#         JUCE_WEB_BROWSER=1
-#         JUCE_USE_CURL=0
-# )
