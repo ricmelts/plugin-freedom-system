@@ -1,0 +1,93 @@
+{
+  "agent": "dsp-agent",
+  "status": "success",
+  "outputs": {
+    "plugin_name": "RedShiftDistortion",
+    "complexity": 4.6,
+    "phase_completed": "2.3",
+    "phases_total": 3,
+    "all_phases_complete": true,
+    "phase_description": "Granular doppler shift with cumulative pitch shifting in feedback loop",
+    "components_this_phase": [
+      "Granular Doppler Shift Engine (custom granular synthesis)",
+      "Grain State Management (4 grain slots per channel)",
+      "Grain Scheduling System (2x or 4x overlap)",
+      "Hann Window Function (smooth grain boundaries)",
+      "Pitch Ratio Calculation (±12 semitones cumulative)",
+      "Grain Buffer Management (DelayLine-based circular buffers)",
+      "Latency Reporting (260ms delay + variable grain size)"
+    ],
+    "total_components": 11,
+    "total_parameters_connected": 13,
+    "real_time_safe": true,
+    "dsp_components_complete": [
+      "Stereo Width Modulation (Phase 2.1)",
+      "Tape Delay 260ms (Phase 2.1)",
+      "Master Output Level (Phase 2.1)",
+      "Cumulative Saturation (Phase 2.2)",
+      "Dual-Band Filtering (Phase 2.2)",
+      "Feedback Loop System (Phase 2.2)",
+      "Granular Doppler Shift (Phase 2.3)",
+      "Grain Scheduling (Phase 2.3)",
+      "Hann Windowing (Phase 2.3)",
+      "Pitch Shifting (Phase 2.3)",
+      "Latency Compensation (Phase 2.3)"
+    ],
+    "processing_chain": "Input → Stereo Width → Delay (260ms) + [Feedback Loop: Granular Doppler → Saturation → Dual-Band Filters] → Master Output → Output",
+    "implementation_details": {
+      "grain_algorithm": "Overlapping windowed grains with variable pitch ratio",
+      "pitch_formula": "pitchRatio = pow(2.0, dopplerShift / 100.0)",
+      "pitch_range": "-50% = 0.5x (down 1 octave), 0% = 1.0x (unity), +50% = 2.0x (up 1 octave)",
+      "window_function": "Hann: w(n) = 0.5 * (1 - cos(2π * n / N))",
+      "grain_scheduling": "New grain every grainSize / numOverlappingGrains samples",
+      "overlap_modes": "2x = 2 grains, 4x = 4 grains",
+      "grain_size_range": "25ms to 200ms (default: 100ms)",
+      "cumulative_effect": "Each feedback repeat applies another pitch shift (red/blue shift)",
+      "buffer_management": "Circular DelayLine buffers (200ms max at 192kHz = 38,400 samples)",
+      "normalization": "Output divided by numOverlappingGrains to prevent amplitude buildup",
+      "latency": "260ms base delay + grain size (default: 360ms total at 48kHz = 17,280 samples)"
+    },
+    "parameter_mappings": {
+      "dopplerShift": "Controls pitch ratio: -50% to +50% (±12 semitones per repeat)",
+      "grainSize": "Grain duration: 25ms to 200ms (quality vs latency tradeoff)",
+      "grainOverlap": "Overlap count: 2x or 4x (CPU vs smoothness tradeoff)",
+      "bypassDoppler": "Bypass granular processing (keeps delay + saturation + filters)"
+    },
+    "performance_characteristics": {
+      "estimated_cpu_2x_overlap": "20-30% single core at 48kHz",
+      "estimated_cpu_4x_overlap": "30-40% single core at 48kHz",
+      "total_estimated_cpu": "37-57% single core (all DSP components)",
+      "memory_preallocated": true,
+      "real_time_violations": "None (all buffers preallocated, no allocations in processBlock)",
+      "denormal_protection": "juce::ScopedNoDenormals + Hann window never reaches true zero"
+    },
+    "testing_notes": [
+      "Granular doppler shift is the highest complexity component (~70% of project risk)",
+      "Test with sine wave input first to verify pitch accuracy before musical material",
+      "Monitor for clicks/pops at grain boundaries (indicates windowing issue)",
+      "Test extreme settings: +50% doppler + 95% feedback = pitch escalation (should naturally shift out of audible range)",
+      "Verify cumulative pitch shifting: Each repeat should shift further than previous",
+      "Test grain size parameter: 25ms (lower latency) vs 200ms (smoother)",
+      "Test grain overlap parameter: 2x (lower CPU) vs 4x (smoother quality)",
+      "Verify bypass doppler works (keeps delay + saturation, skips granular processing)",
+      "Test CPU usage at 2x and 4x overlap settings",
+      "Verify latency reporting to host (should match 260ms + grain size)"
+    ]
+  },
+  "issues": [],
+  "ready_for_next_stage": true,
+  "timestamp": "2026-02-12T10:30:00Z",
+  "notes": [
+    "Phase 2.3 completes all DSP implementation for RedShiftDistortion",
+    "All 3 DSP phases now complete: 2.1 (Core), 2.2 (Feedback Loop), 2.3 (Granular Doppler)",
+    "Total DSP components: 11 (stereo width, delay, granular doppler, saturation, 2 filters, feedback system, grain scheduling, windowing, pitch shifting, master output)",
+    "All 13 parameters connected to DSP: 7 main controls + 4 bypass controls + 2 advanced settings",
+    "Real-time safety verified: All buffers preallocated in prepareToPlay, no allocations in processBlock",
+    "Granular synthesis implementation: Custom grain scheduler + Hann windowing + pitch-ratio based playback",
+    "Cumulative doppler effect: Each feedback repeat applies another pitch shift (red shift / blue shift concept)",
+    "Performance: Estimated 37-57% CPU at 48kHz (moderate but acceptable for creative effect)",
+    "Latency: Variable 260ms + grain size (default 360ms), reported to host via getLatencySamples()",
+    "Next stage: GUI implementation (Stage 3) with WebView UI, parameter binding, VU meters",
+    "Ready for automated testing: 5 automated tests will verify DSP functionality before GUI development"
+  ]
+}

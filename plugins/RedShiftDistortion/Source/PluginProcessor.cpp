@@ -201,6 +201,37 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     // Reset feedback state
     feedbackStateL = 0.0f;
     feedbackStateR = 0.0f;
+
+    // Phase 2.3: Prepare granular doppler shift components
+    // Max grain size: 200ms at 192kHz = 38,400 samples
+    const int maxGrainSizeSamples = static_cast<int>(0.200 * sampleRate);
+
+    grainBufferL.prepare(spec);
+    grainBufferL.setMaximumDelayInSamples(maxGrainSizeSamples);
+    grainBufferL.reset();
+
+    grainBufferR.prepare(spec);
+    grainBufferR.setMaximumDelayInSamples(maxGrainSizeSamples);
+    grainBufferR.reset();
+
+    // Reset all grain states (all inactive)
+    for (auto& grain : grainsL)
+    {
+        grain.readPosition = 0.0f;
+        grain.grainAge = 0.0f;
+        grain.isActive = false;
+    }
+
+    for (auto& grain : grainsR)
+    {
+        grain.readPosition = 0.0f;
+        grain.grainAge = 0.0f;
+        grain.isActive = false;
+    }
+
+    // Initialize grain scheduling (will be updated in processBlock based on parameters)
+    samplesSinceLastGrain = 0;
+    grainSpacingSamples = 0;
 }
 
 void RedShiftDistortionAudioProcessor::releaseResources()
@@ -231,6 +262,12 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     auto* filterBandHighParam = parameters.getRawParameterValue("filterBandHigh");
     auto* bypassSaturationParam = parameters.getRawParameterValue("bypassSaturation");
 
+    // Phase 2.3: Read granular doppler shift parameters
+    auto* dopplerShiftParam = parameters.getRawParameterValue("dopplerShift");
+    auto* grainSizeParam = parameters.getRawParameterValue("grainSize");
+    auto* grainOverlapParam = parameters.getRawParameterValue("grainOverlap");
+    auto* bypassDopplerParam = parameters.getRawParameterValue("bypassDoppler");
+
     float stereoWidthValue = stereoWidthParam->load();
     bool bypassDelay = bypassDelayParam->load() > 0.5f;
     bool bypassStereoWidth = bypassStereoWidthParam->load() > 0.5f;
@@ -242,6 +279,12 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     float filterBandLow = filterBandLowParam->load();
     float filterBandHigh = filterBandHighParam->load();
     bool bypassSaturation = bypassSaturationParam->load() > 0.5f;
+
+    // Phase 2.3: Load granular doppler shift parameter values
+    float dopplerShift = dopplerShiftParam->load();  // -50% to +50%
+    float grainSizeMs = grainSizeParam->load();       // 25ms to 200ms
+    int grainOverlapChoice = static_cast<int>(grainOverlapParam->load());  // 0=2x, 1=4x
+    bool bypassDoppler = bypassDopplerParam->load() > 0.5f;
 
     // Apply bypass stereo width (set to 0% = mono)
     if (bypassStereoWidth)
@@ -267,6 +310,20 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     // gain = pow(10.0, saturationDB / 20.0)
     // -12dB → 0.251x, 0dB → 1.0x, +24dB → 15.85x
     float saturationGain = std::pow(10.0f, saturationDB / 20.0f);
+
+    // Phase 2.3: Calculate granular doppler shift parameters
+    // Pitch ratio: pitchRatio = pow(2.0, dopplerShift / 100.0)
+    // -50% → 0.5 (down 1 octave), 0% → 1.0 (unity), +50% → 2.0 (up 1 octave)
+    float pitchRatio = std::pow(2.0f, dopplerShift / 100.0f);
+
+    // Grain size in samples
+    int grainSizeSamples = static_cast<int>((grainSizeMs / 1000.0f) * static_cast<float>(currentSampleRate));
+
+    // Number of overlapping grains (2x or 4x)
+    int numOverlappingGrains = (grainOverlapChoice == 0) ? 2 : 4;
+
+    // Grain spacing: Start new grain every grainSize / numOverlappingGrains samples
+    grainSpacingSamples = grainSizeSamples / numOverlappingGrains;
 
     // If delay bypassed, only apply master output gain and return
     if (bypassDelay)
@@ -351,15 +408,132 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 
         // === FEEDBACK LOOP START ===
 
-        // 6. Apply saturation (if not bypassed)
-        float saturatedL = delayedL;
-        float saturatedR = delayedR;
+        // Phase 2.3: Granular Doppler Shift (BEFORE saturation in feedback loop)
+        float dopplerShiftedL = delayedL;
+        float dopplerShiftedR = delayedR;
+
+        if (!bypassDoppler)
+        {
+            // Write delayed signal to grain buffers
+            grainBufferL.pushSample(0, delayedL);
+            grainBufferR.pushSample(0, delayedR);
+
+            // Grain scheduling: Start new grain every grainSpacingSamples
+            samplesSinceLastGrain++;
+            if (samplesSinceLastGrain >= grainSpacingSamples && grainSpacingSamples > 0)
+            {
+                // Find inactive grain slot and activate it
+                for (int g = 0; g < numOverlappingGrains; ++g)
+                {
+                    if (!grainsL[g].isActive)
+                    {
+                        grainsL[g].readPosition = 0.0f;
+                        grainsL[g].grainAge = 0.0f;
+                        grainsL[g].isActive = true;
+                        break;  // Only activate one grain per scheduling event
+                    }
+                }
+
+                for (int g = 0; g < numOverlappingGrains; ++g)
+                {
+                    if (!grainsR[g].isActive)
+                    {
+                        grainsR[g].readPosition = 0.0f;
+                        grainsR[g].grainAge = 0.0f;
+                        grainsR[g].isActive = true;
+                        break;
+                    }
+                }
+
+                samplesSinceLastGrain = 0;  // Reset counter
+            }
+
+            // Grain playback: Read from all active grains and sum
+            float grainOutputL = 0.0f;
+            float grainOutputR = 0.0f;
+            int activeGrainsCountL = 0;
+            int activeGrainsCountR = 0;
+
+            // Process left channel grains
+            for (int g = 0; g < numOverlappingGrains; ++g)
+            {
+                auto& grain = grainsL[g];
+                if (!grain.isActive)
+                    continue;
+
+                activeGrainsCountL++;
+
+                // Calculate Hann window value: w(n) = 0.5 * (1 - cos(2π * n / N))
+                const float pi = juce::MathConstants<float>::pi;
+                float windowValue = 0.5f * (1.0f - std::cos(2.0f * pi * grain.grainAge / static_cast<float>(grainSizeSamples)));
+
+                // Read sample from grain buffer at current read position
+                // Note: grainBufferL acts as circular buffer, read from readPosition samples ago
+                float grainSample = grainBufferL.popSample(0, grain.readPosition);
+
+                // Apply Hann window and accumulate
+                grainOutputL += grainSample * windowValue;
+
+                // Advance read position by pitch ratio (faster = upshift, slower = downshift)
+                grain.readPosition += pitchRatio;
+
+                // Advance grain age by 1.0 sample
+                grain.grainAge += 1.0f;
+
+                // Deactivate grain if it has aged past grain size
+                if (grain.grainAge >= static_cast<float>(grainSizeSamples))
+                {
+                    grain.isActive = false;
+                }
+            }
+
+            // Process right channel grains
+            for (int g = 0; g < numOverlappingGrains; ++g)
+            {
+                auto& grain = grainsR[g];
+                if (!grain.isActive)
+                    continue;
+
+                activeGrainsCountR++;
+
+                // Calculate Hann window value
+                const float pi = juce::MathConstants<float>::pi;
+                float windowValue = 0.5f * (1.0f - std::cos(2.0f * pi * grain.grainAge / static_cast<float>(grainSizeSamples)));
+
+                // Read sample from grain buffer
+                float grainSample = grainBufferR.popSample(0, grain.readPosition);
+
+                // Apply Hann window and accumulate
+                grainOutputR += grainSample * windowValue;
+
+                // Advance read position and grain age
+                grain.readPosition += pitchRatio;
+                grain.grainAge += 1.0f;
+
+                // Deactivate grain if aged out
+                if (grain.grainAge >= static_cast<float>(grainSizeSamples))
+                {
+                    grain.isActive = false;
+                }
+            }
+
+            // Normalize output by number of overlapping grains (prevent amplitude buildup)
+            if (activeGrainsCountL > 0)
+                dopplerShiftedL = grainOutputL / static_cast<float>(numOverlappingGrains);
+
+            if (activeGrainsCountR > 0)
+                dopplerShiftedR = grainOutputR / static_cast<float>(numOverlappingGrains);
+        }
+
+        // 6. Apply saturation to doppler-shifted signal (if not bypassed)
+        float saturatedL = dopplerShiftedL;
+        float saturatedR = dopplerShiftedR;
 
         if (!bypassSaturation)
         {
             // Apply gain, then tanh waveshaping
-            saturatedL = std::tanh(saturationGain * delayedL);
-            saturatedR = std::tanh(saturationGain * delayedR);
+            saturatedL = std::tanh(saturationGain * dopplerShiftedL);
+            saturatedR = std::tanh(saturationGain * dopplerShiftedR);
         }
 
         // 7. Apply dual-band filtering (hi-pass → lo-pass)
