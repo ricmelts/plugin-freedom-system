@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_dsp/juce_dsp.h>
 
 class RedShiftDistortionAudioProcessor : public juce::AudioProcessor
 {
@@ -35,6 +36,20 @@ public:
 private:
     // Parameter layout creation
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
+    // DSP Components (Phase 2.1: Stereo Width + Basic Delay)
+    juce::dsp::ProcessSpec spec;
+
+    // Stereo width delay lines (L + R channels)
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoWidthDelayL;
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoWidthDelayR;
+
+    // Tape delay lines (L + R channels) - 260ms base delay
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelayL;
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelayR;
+
+    // Cached sample rate for delay time calculations
+    double currentSampleRate = 44100.0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RedShiftDistortionAudioProcessor)
 };

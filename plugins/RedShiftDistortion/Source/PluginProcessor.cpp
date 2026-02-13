@@ -137,13 +137,44 @@ RedShiftDistortionAudioProcessor::~RedShiftDistortionAudioProcessor()
 
 void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // Initialization will be added in Stage 2 (DSP)
-    juce::ignoreUnused(sampleRate, samplesPerBlock);
+    // Store sample rate for delay time calculations
+    currentSampleRate = sampleRate;
+
+    // Prepare DSP spec
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+    spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
+
+    // Calculate max delay time in samples
+    // Stereo width: ±260ms max differential + 260ms base = 520ms total
+    // Tape delay: 260ms base
+    // Total max: 520ms at 192kHz = 99,840 samples
+    const int maxStereoWidthDelaySamples = static_cast<int>(0.520 * sampleRate);  // 520ms
+    const int maxTapeDelaySamples = static_cast<int>(0.260 * sampleRate);        // 260ms
+
+    // Prepare stereo width delay lines
+    stereoWidthDelayL.prepare(spec);
+    stereoWidthDelayL.setMaximumDelayInSamples(maxStereoWidthDelaySamples);
+    stereoWidthDelayL.reset();
+
+    stereoWidthDelayR.prepare(spec);
+    stereoWidthDelayR.setMaximumDelayInSamples(maxStereoWidthDelaySamples);
+    stereoWidthDelayR.reset();
+
+    // Prepare tape delay lines
+    tapeDelayL.prepare(spec);
+    tapeDelayL.setMaximumDelayInSamples(maxTapeDelaySamples);
+    tapeDelayL.reset();
+
+    tapeDelayR.prepare(spec);
+    tapeDelayR.setMaximumDelayInSamples(maxTapeDelaySamples);
+    tapeDelayR.reset();
 }
 
 void RedShiftDistortionAudioProcessor::releaseResources()
 {
-    // Cleanup will be added in Stage 2 (DSP)
+    // Optional: Release delay buffers to save memory when plugin not in use
+    // DelayLine components handle their own cleanup automatically
 }
 
 void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -151,12 +182,110 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     juce::ScopedNoDenormals noDenormals;
     juce::ignoreUnused(midiMessages);
 
-    // Parameter access example (for Stage 2 DSP implementation):
-    // auto* stereoWidthParam = parameters.getRawParameterValue("stereoWidth");
-    // float stereoWidthValue = stereoWidthParam->load();  // Atomic read (real-time safe)
+    // Clear unused channels
+    for (int i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+        buffer.clear(i, 0, buffer.getNumSamples());
 
-    // Pass-through for Stage 1 (DSP implementation happens in Stage 2)
-    // Audio routing is already handled by JUCE (input → output)
+    // Read parameters (atomic, real-time safe)
+    auto* stereoWidthParam = parameters.getRawParameterValue("stereoWidth");
+    auto* bypassDelayParam = parameters.getRawParameterValue("bypassDelay");
+    auto* bypassStereoWidthParam = parameters.getRawParameterValue("bypassStereoWidth");
+    auto* masterOutputParam = parameters.getRawParameterValue("masterOutput");
+
+    float stereoWidthValue = stereoWidthParam->load();
+    bool bypassDelay = bypassDelayParam->load() > 0.5f;
+    bool bypassStereoWidth = bypassStereoWidthParam->load() > 0.5f;
+    float masterOutputDB = masterOutputParam->load();
+
+    // Apply bypass stereo width (set to 0% = mono)
+    if (bypassStereoWidth)
+        stereoWidthValue = 0.0f;
+
+    // If delay bypassed, only apply master output gain and return
+    if (bypassDelay)
+    {
+        // Apply master output gain
+        float masterGain = std::pow(10.0f, masterOutputDB / 20.0f);
+        buffer.applyGain(masterGain);
+        return;
+    }
+
+    const int numSamples = buffer.getNumSamples();
+    const int numChannels = buffer.getNumChannels();
+
+    // Only process stereo (L + R)
+    if (numChannels < 2)
+        return;
+
+    // Calculate stereo width delay times
+    // Base delay: 260ms (fixed)
+    // Differential: (stereoWidth / 100.0) * 260ms
+    // L channel delay: 260ms + (stereoWidth < 0 ? differential : 0)
+    // R channel delay: 260ms + (stereoWidth > 0 ? differential : 0)
+    const float baseDelayMs = 260.0f;
+    const float differentialMs = (stereoWidthValue / 100.0f) * 260.0f;
+
+    float lChannelDelayMs = baseDelayMs;
+    float rChannelDelayMs = baseDelayMs;
+
+    if (stereoWidthValue < 0.0f)
+    {
+        // Negative width: L channel delayed more
+        lChannelDelayMs += std::abs(differentialMs);
+    }
+    else if (stereoWidthValue > 0.0f)
+    {
+        // Positive width: R channel delayed more
+        rChannelDelayMs += differentialMs;
+    }
+    // At stereoWidth = 0: Both channels equal (mono)
+
+    // Convert delay times to samples
+    const float lChannelDelaySamples = (lChannelDelayMs / 1000.0f) * static_cast<float>(currentSampleRate);
+    const float rChannelDelaySamples = (rChannelDelayMs / 1000.0f) * static_cast<float>(currentSampleRate);
+
+    // Set stereo width delay times
+    stereoWidthDelayL.setDelay(lChannelDelaySamples);
+    stereoWidthDelayR.setDelay(rChannelDelaySamples);
+
+    // Fixed tape delay time: 260ms
+    const float tapeDelaySamples = (baseDelayMs / 1000.0f) * static_cast<float>(currentSampleRate);
+    tapeDelayL.setDelay(tapeDelaySamples);
+    tapeDelayR.setDelay(tapeDelaySamples);
+
+    // Get channel pointers
+    auto* leftChannel = buffer.getWritePointer(0);
+    auto* rightChannel = buffer.getWritePointer(1);
+
+    // Process each sample
+    for (int sample = 0; sample < numSamples; ++sample)
+    {
+        // Phase 2.1: Stereo Width → Tape Delay (no feedback yet)
+
+        // 1. Push current input into stereo width delay
+        stereoWidthDelayL.pushSample(0, leftChannel[sample]);
+        stereoWidthDelayR.pushSample(0, rightChannel[sample]);
+
+        // 2. Read stereo-widened signal
+        float stereoWidenedL = stereoWidthDelayL.popSample(0);
+        float stereoWidenedR = stereoWidthDelayR.popSample(0);
+
+        // 3. Push stereo-widened signal into tape delay
+        tapeDelayL.pushSample(0, stereoWidenedL);
+        tapeDelayR.pushSample(0, stereoWidenedR);
+
+        // 4. Read delayed signal (260ms delay)
+        float delayedL = tapeDelayL.popSample(0);
+        float delayedR = tapeDelayR.popSample(0);
+
+        // 5. Output = delayed signal (100% wet, no dry mix in Phase 2.1)
+        leftChannel[sample] = delayedL;
+        rightChannel[sample] = delayedR;
+    }
+
+    // Apply master output gain
+    float masterGain = std::pow(10.0f, masterOutputDB / 20.0f);
+    buffer.applyGain(masterGain);
 }
 
 juce::AudioProcessorEditor* RedShiftDistortionAudioProcessor::createEditor()
