@@ -2,12 +2,12 @@ cmake_minimum_required(VERSION 3.15)
 
 # Plugin formats: VST3, AU, Standalone
 juce_add_plugin(RedShiftDistortion
-    COMPANY_NAME "RicMelts"
-    PLUGIN_MANUFACTURER_CODE Pfre
-    PLUGIN_CODE RsDs
+    COMPANY_NAME "FreedomAudio"
+    PLUGIN_MANUFACTURER_CODE FrAu
+    PLUGIN_CODE RsDt
     FORMATS VST3 AU Standalone
     PRODUCT_NAME "RedShiftDistortion"
-    NEEDS_WEB_BROWSER TRUE  # REQUIRED for VST3 WebView support (Pattern #9)
+    NEEDS_WEB_BROWSER TRUE  # CRITICAL for VST3 WebView support
 )
 
 # Source files
@@ -45,33 +45,31 @@ target_link_libraries(RedShiftDistortion
         juce::juce_recommended_warning_flags
 )
 
-# CRITICAL: Generate JuceHeader.h (JUCE 8 requirement, Pattern #1)
-# Must come AFTER target_link_libraries
+# Generate JuceHeader.h (JUCE 8 requirement - MUST come after target_link_libraries)
 juce_generate_juce_header(RedShiftDistortion)
+
+# WebView UI Resources (uncommented by gui-agent if WebView UI used)
+# juce_add_binary_data(RedShiftDistortion_UIResources
+#     SOURCES
+#         Source/ui/public/index.html
+#         Source/ui/public/js/juce/index.js
+#         Source/ui/public/js/juce/check_native_interop.js
+# )
+#
+# target_link_libraries(RedShiftDistortion
+#     PRIVATE
+#         RedShiftDistortion_UIResources
+# )
 
 # Compile definitions
 target_compile_definitions(RedShiftDistortion
     PUBLIC
         JUCE_VST3_CAN_REPLACE_VST2=0
-        JUCE_WEB_BROWSER=1
-        JUCE_USE_CURL=0
 )
 
-# WebView UI Resources (Pattern #13: binary data for embedded HTML/JS/assets)
-juce_add_binary_data(RedShiftDistortion_UIResources
-    SOURCES
-        Source/ui/public/index.html
-        Source/ui/public/js/juce/index.js
-        Source/ui/public/js/juce/check_native_interop.js
-        Source/ui/public/assets/00fa754f6e134fb61f5e452b7ba8415e529dd82a.png
-        Source/ui/public/assets/4287f6bace032d3fb347fc04a01722012ff802a1.png
-        Source/ui/public/assets/f26475b6e81b4d3a1423f46d75b9ae5c2611416a.png
-        Source/ui/public/assets/hise_knob_big.png
-        Source/ui/public/assets/hise_knob_small.png
-)
-
-# Link UI resources to plugin
-target_link_libraries(RedShiftDistortion
-    PRIVATE
-        RedShiftDistortion_UIResources
-)
+# WebView support (uncommented by gui-agent if WebView UI used)
+# target_compile_definitions(RedShiftDistortion
+#     PUBLIC
+#         JUCE_WEB_BROWSER=1
+#         JUCE_USE_CURL=0
+# )
