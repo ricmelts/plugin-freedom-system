@@ -169,6 +169,38 @@ void RedShiftDistortionAudioProcessor::prepareToPlay(double sampleRate, int samp
     tapeDelayR.prepare(spec);
     tapeDelayR.setMaximumDelayInSamples(maxTapeDelaySamples);
     tapeDelayR.reset();
+
+    // Phase 2.2: Prepare saturation waveshapers
+    saturationL.prepare(spec);
+    saturationL.functionToUse = [](float x) { return std::tanh(x); };
+    saturationL.reset();
+
+    saturationR.prepare(spec);
+    saturationR.functionToUse = [](float x) { return std::tanh(x); };
+    saturationR.reset();
+
+    // Phase 2.2: Prepare dual-band filters
+    hiPassFilterL.prepare(spec);
+    hiPassFilterL.reset();
+
+    hiPassFilterR.prepare(spec);
+    hiPassFilterR.reset();
+
+    loPassFilterL.prepare(spec);
+    loPassFilterL.reset();
+
+    loPassFilterR.prepare(spec);
+    loPassFilterR.reset();
+
+    // Initialize filter coefficients (will be updated in processBlock when parameters change)
+    *hiPassFilterL.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 100.0, 0.707);
+    *hiPassFilterR.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 100.0, 0.707);
+    *loPassFilterL.coefficients = *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 8000.0, 0.707);
+    *loPassFilterR.coefficients = *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 8000.0, 0.707);
+
+    // Reset feedback state
+    feedbackStateL = 0.0f;
+    feedbackStateR = 0.0f;
 }
 
 void RedShiftDistortionAudioProcessor::releaseResources()
@@ -192,14 +224,49 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     auto* bypassStereoWidthParam = parameters.getRawParameterValue("bypassStereoWidth");
     auto* masterOutputParam = parameters.getRawParameterValue("masterOutput");
 
+    // Phase 2.2: Read feedback loop parameters
+    auto* feedbackParam = parameters.getRawParameterValue("feedback");
+    auto* saturationParam = parameters.getRawParameterValue("saturation");
+    auto* filterBandLowParam = parameters.getRawParameterValue("filterBandLow");
+    auto* filterBandHighParam = parameters.getRawParameterValue("filterBandHigh");
+    auto* bypassSaturationParam = parameters.getRawParameterValue("bypassSaturation");
+
     float stereoWidthValue = stereoWidthParam->load();
     bool bypassDelay = bypassDelayParam->load() > 0.5f;
     bool bypassStereoWidth = bypassStereoWidthParam->load() > 0.5f;
     float masterOutputDB = masterOutputParam->load();
 
+    // Phase 2.2: Load feedback loop parameter values
+    float feedbackValue = feedbackParam->load() / 100.0f;  // Convert 0-95% to 0.0-0.95
+    float saturationDB = saturationParam->load();
+    float filterBandLow = filterBandLowParam->load();
+    float filterBandHigh = filterBandHighParam->load();
+    bool bypassSaturation = bypassSaturationParam->load() > 0.5f;
+
     // Apply bypass stereo width (set to 0% = mono)
     if (bypassStereoWidth)
         stereoWidthValue = 0.0f;
+
+    // Phase 2.2: Update filter coefficients if parameters changed
+    // Edge case: If lo-cut > hi-cut, swap values to ensure valid bandpass range
+    float actualFilterBandLow = filterBandLow;
+    float actualFilterBandHigh = filterBandHigh;
+    if (actualFilterBandLow > actualFilterBandHigh)
+        std::swap(actualFilterBandLow, actualFilterBandHigh);
+
+    // Update filter coefficients (clamp to 20Hz-20kHz to avoid Nyquist issues)
+    actualFilterBandLow = juce::jlimit(20.0f, 20000.0f, actualFilterBandLow);
+    actualFilterBandHigh = juce::jlimit(20.0f, 20000.0f, actualFilterBandHigh);
+
+    *hiPassFilterL.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass(currentSampleRate, actualFilterBandLow, 0.707);
+    *hiPassFilterR.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass(currentSampleRate, actualFilterBandLow, 0.707);
+    *loPassFilterL.coefficients = *juce::dsp::IIR::Coefficients<float>::makeLowPass(currentSampleRate, actualFilterBandHigh, 0.707);
+    *loPassFilterR.coefficients = *juce::dsp::IIR::Coefficients<float>::makeLowPass(currentSampleRate, actualFilterBandHigh, 0.707);
+
+    // Phase 2.2: Calculate saturation gain
+    // gain = pow(10.0, saturationDB / 20.0)
+    // -12dB → 0.251x, 0dB → 1.0x, +24dB → 15.85x
+    float saturationGain = std::pow(10.0f, saturationDB / 20.0f);
 
     // If delay bypassed, only apply master output gain and return
     if (bypassDelay)
@@ -260,25 +327,60 @@ void RedShiftDistortionAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
     // Process each sample
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        // Phase 2.1: Stereo Width → Tape Delay (no feedback yet)
+        // Phase 2.2: Stereo Width → Tape Delay + Feedback Loop (Saturation + Filters)
 
-        // 1. Push current input into stereo width delay
-        stereoWidthDelayL.pushSample(0, leftChannel[sample]);
-        stereoWidthDelayR.pushSample(0, rightChannel[sample]);
+        // 1. Mix current input with feedback signal
+        float inputWithFeedbackL = leftChannel[sample] + feedbackStateL;
+        float inputWithFeedbackR = rightChannel[sample] + feedbackStateR;
 
-        // 2. Read stereo-widened signal
+        // 2. Push mixed input into stereo width delay
+        stereoWidthDelayL.pushSample(0, inputWithFeedbackL);
+        stereoWidthDelayR.pushSample(0, inputWithFeedbackR);
+
+        // 3. Read stereo-widened signal
         float stereoWidenedL = stereoWidthDelayL.popSample(0);
         float stereoWidenedR = stereoWidthDelayR.popSample(0);
 
-        // 3. Push stereo-widened signal into tape delay
+        // 4. Push stereo-widened signal into tape delay
         tapeDelayL.pushSample(0, stereoWidenedL);
         tapeDelayR.pushSample(0, stereoWidenedR);
 
-        // 4. Read delayed signal (260ms delay)
+        // 5. Read delayed signal (260ms delay)
         float delayedL = tapeDelayL.popSample(0);
         float delayedR = tapeDelayR.popSample(0);
 
-        // 5. Output = delayed signal (100% wet, no dry mix in Phase 2.1)
+        // === FEEDBACK LOOP START ===
+
+        // 6. Apply saturation (if not bypassed)
+        float saturatedL = delayedL;
+        float saturatedR = delayedR;
+
+        if (!bypassSaturation)
+        {
+            // Apply gain, then tanh waveshaping
+            saturatedL = std::tanh(saturationGain * delayedL);
+            saturatedR = std::tanh(saturationGain * delayedR);
+        }
+
+        // 7. Apply dual-band filtering (hi-pass → lo-pass)
+        float filteredL = saturatedL;
+        float filteredR = saturatedR;
+
+        // Hi-pass filter (lo-cut)
+        filteredL = hiPassFilterL.processSample(filteredL);
+        filteredR = hiPassFilterR.processSample(filteredR);
+
+        // Lo-pass filter (hi-cut)
+        filteredL = loPassFilterL.processSample(filteredL);
+        filteredR = loPassFilterR.processSample(filteredR);
+
+        // 8. Scale by feedback gain and store for next iteration
+        feedbackStateL = filteredL * feedbackValue;
+        feedbackStateR = filteredR * feedbackValue;
+
+        // === FEEDBACK LOOP END ===
+
+        // 9. Output = delayed signal (100% wet, no dry mix)
         leftChannel[sample] = delayedL;
         rightChannel[sample] = delayedR;
     }

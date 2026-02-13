@@ -48,6 +48,22 @@ private:
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelayL;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelayR;
 
+    // Phase 2.2: Saturation + Filters + Feedback Loop
+
+    // Cumulative saturation (tanh waveshaper)
+    juce::dsp::WaveShaper<float> saturationL;
+    juce::dsp::WaveShaper<float> saturationR;
+
+    // Dual-band filtering (hi-pass + lo-pass)
+    juce::dsp::IIR::Filter<float> hiPassFilterL;
+    juce::dsp::IIR::Filter<float> hiPassFilterR;
+    juce::dsp::IIR::Filter<float> loPassFilterL;
+    juce::dsp::IIR::Filter<float> loPassFilterR;
+
+    // Feedback state (previous output samples for feedback loop)
+    float feedbackStateL = 0.0f;
+    float feedbackStateR = 0.0f;
+
     // Cached sample rate for delay time calculations
     double currentSampleRate = 44100.0;
 
