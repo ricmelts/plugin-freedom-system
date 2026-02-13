@@ -167,8 +167,8 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     dopplerKnob.setLookAndFeel(&filmstripLookAndFeel);
     addAndMakeVisible(dopplerKnob);
 
-    // Setup label below knob ("doppler effect delay")
-    dopplerLabel.setText("doppler effect delay", juce::dontSendNotification);
+    // Setup label below knob ("delay time")
+    dopplerLabel.setText("delay time", juce::dontSendNotification);
     dopplerLabel.setJustificationType(juce::Justification::centred);
     if (handjetTypeface != nullptr)
         dopplerLabel.setFont(juce::FontOptions(handjetTypeface).withHeight(16.0f));
@@ -178,8 +178,8 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     dopplerLabel.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
     addAndMakeVisible(dopplerLabel);
 
-    // Setup value display label (shows current value with %)
-    dopplerValueLabel.setText("0.0%", juce::dontSendNotification);
+    // Setup value display label (shows current delay time)
+    dopplerValueLabel.setText("260ms", juce::dontSendNotification);
     dopplerValueLabel.setJustificationType(juce::Justification::centred);
     if (handjetTypeface != nullptr)
         dopplerValueLabel.setFont(juce::FontOptions(handjetTypeface).withHeight(20.0f));
@@ -189,24 +189,37 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     dopplerValueLabel.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
     addAndMakeVisible(dopplerValueLabel);
 
-    // Attach to parameter
-    auto* dopplerParam = dynamic_cast<juce::RangedAudioParameter*>(
-        processorRef.parameters.getParameter("dopplerShift")
+    // Attach to delayTime parameter (repurposed from dopplerShift)
+    auto* delayTimeParam = dynamic_cast<juce::RangedAudioParameter*>(
+        processorRef.parameters.getParameter("delayTime")
     );
-    if (dopplerParam)
+    if (delayTimeParam)
     {
         dopplerAttachment = std::make_unique<juce::SliderParameterAttachment>(
-            *dopplerParam,
+            *delayTimeParam,
             dopplerKnob
         );
 
-        // Update value label when knob changes
+        // Update value label with ms/s formatting
         dopplerKnob.onValueChange = [this]()
         {
-            dopplerValueLabel.setText(
-                juce::String(dopplerKnob.getValue(), 1) + "%",
-                juce::dontSendNotification
-            );
+            float ms = dopplerKnob.getValue();
+            if (ms >= 1000.0f)
+            {
+                // Display in seconds for values >= 1000ms
+                dopplerValueLabel.setText(
+                    juce::String(ms / 1000.0f, 1) + "s",
+                    juce::dontSendNotification
+                );
+            }
+            else
+            {
+                // Display in milliseconds
+                dopplerValueLabel.setText(
+                    juce::String(static_cast<int>(ms)) + "ms",
+                    juce::dontSendNotification
+                );
+            }
         };
     }
 
@@ -225,7 +238,7 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     stereoWidthKnob.setLookAndFeel(&mediumFilmstripLookAndFeel);
     addAndMakeVisible(stereoWidthKnob);
 
-    stereoWidthLabel.setText("stereo width", juce::dontSendNotification);
+    stereoWidthLabel.setText("ping-pong", juce::dontSendNotification);
     stereoWidthLabel.setJustificationType(juce::Justification::centred);
     if (handjetTypeface != nullptr)
         stereoWidthLabel.setFont(juce::FontOptions(handjetTypeface).withHeight(14.0f));
@@ -245,13 +258,13 @@ RedShiftDistortionAudioProcessorEditor::RedShiftDistortionAudioProcessorEditor(R
     stereoWidthValueLabel.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
     addAndMakeVisible(stereoWidthValueLabel);
 
-    auto* stereoWidthParam = dynamic_cast<juce::RangedAudioParameter*>(
-        processorRef.parameters.getParameter("stereoWidth")
+    auto* pingPongAmountParam = dynamic_cast<juce::RangedAudioParameter*>(
+        processorRef.parameters.getParameter("pingPongAmount")
     );
-    if (stereoWidthParam)
+    if (pingPongAmountParam)
     {
         stereoWidthAttachment = std::make_unique<juce::SliderParameterAttachment>(
-            *stereoWidthParam,
+            *pingPongAmountParam,
             stereoWidthKnob
         );
         stereoWidthKnob.onValueChange = [this]() {

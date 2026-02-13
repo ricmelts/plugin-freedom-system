@@ -1,7 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
-#include <array>
 
 class RedShiftDistortionAudioProcessor : public juce::AudioProcessor
 {
@@ -50,20 +49,16 @@ private:
     // Parameter layout creation
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    // DSP Components (Phase 2.1: Stereo Width + Basic Delay)
+    // DSP Components (One-Sided Tape Delay Architecture)
     juce::dsp::ProcessSpec spec;
 
-    // Stereo width delay lines (L + R channels)
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoWidthDelayL;
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoWidthDelayR;
-
-    // Tape delay lines (L + R channels) - 260ms base delay
+    // Tape delay lines (L + R channels) - user-controllable delay time (10-2000ms)
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelayL;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> tapeDelayR;
 
-    // Phase 2.2: Saturation + Filters + Feedback Loop
+    // Saturation + Filters + Feedback Loop
 
-    // Cumulative saturation (tanh waveshaper)
+    // Tube saturation (asymmetrical tanh waveshaper)
     juce::dsp::WaveShaper<float> saturationL;
     juce::dsp::WaveShaper<float> saturationR;
 
@@ -77,26 +72,9 @@ private:
     float feedbackStateL = 0.0f;
     float feedbackStateR = 0.0f;
 
-    // Phase 2.3: Granular Doppler Shift Components
-
-    // Grain state structure (tracks individual grain playback)
-    struct GrainState {
-        float readPosition = 0.0f;  // Current read position in grain buffer (fractional samples)
-        float grainAge = 0.0f;       // Age of grain in samples (for window calculation)
-        bool isActive = false;       // Is this grain currently playing?
-    };
-
-    // Grain states for each channel (L + R) - max 4 grains for 4x overlap
-    std::array<GrainState, 4> grainsL;
-    std::array<GrainState, 4> grainsR;
-
-    // Grain buffers (circular buffers for grain storage)
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> grainBufferL;
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> grainBufferR;
-
-    // Grain scheduling state
-    int grainSpacingSamples = 0;      // How many samples between grain starts
-    int samplesSinceLastGrain = 0;    // Counter for grain scheduling
+    // Ping-pong cross-feedback buffers
+    float pingPongBufferL = 0.0f;
+    float pingPongBufferR = 0.0f;
 
     // Cached sample rate for delay time calculations
     double currentSampleRate = 44100.0;
